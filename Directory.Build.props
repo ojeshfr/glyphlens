@@ -1,0 +1,25 @@
+<Project>
+  <!-- Shared build settings for every .NET project in the GlyphLens solution. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Code quality: analyzers on, code style enforced at build time, warnings fail the build. -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: missing XML comments. Public contracts are documented, but this is not enforced per member. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <Product>GlyphLens</Product>
+    <Version>0.1.0</Version>
+    <Company>GlyphLens</Company>
+    <Copyright>Copyright (c) GlyphLens contributors</Copyright>
+  </PropertyGroup>
+</Project>

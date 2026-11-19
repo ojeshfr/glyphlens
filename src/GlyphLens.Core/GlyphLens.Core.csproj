@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Platform-independent domain models and service contracts.
+    Must not reference WPF, Windows APIs, OCR or translation engines.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GlyphLens.Core</RootNamespace>
+  </PropertyGroup>
+
+</Project>

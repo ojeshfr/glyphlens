@@ -1,0 +1,50 @@
+<Window x:Class="GlyphLens.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+        xmlns:views="clr-namespace:GlyphLens.App.Views"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        Title="{Binding ProductName}"
+        Width="900"
+        Height="700"
+        MinWidth="640"
+        MinHeight="520"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="24,20,24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="{Binding ProductName}"
+                       FontSize="28"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Tagline}"
+                       Opacity="0.65"
+                       FontSize="13"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <views:CaptureView Grid.Row="1" DataContext="{Binding Capture}" />
+
+        <StackPanel Grid.Row="2" Margin="0,14,0,0">
+            <TextBlock Text="{Binding FoundationStatus}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding FeatureStatus}"
+                       Opacity="0.65"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding VersionInfo}"
+                       Opacity="0.5"
+                       FontSize="11"
+                       Margin="0,4,0,0" />
+        </StackPanel>
+    </Grid>
+</Window>

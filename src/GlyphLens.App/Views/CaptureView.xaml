@@ -1,0 +1,189 @@
+<UserControl x:Class="GlyphLens.App.Views.CaptureView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:GlyphLens.App.Controls"
+             xmlns:models="clr-namespace:GlyphLens.Core.Models;assembly=GlyphLens.Core"
+             xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:CaptureViewModel}"
+             d:DesignHeight="520"
+             d:DesignWidth="760">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- Status indicator: colour follows the capture service's actual state. -->
+        <Style x:Key="StatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="#7A7A7A" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Capturing}">
+                    <Setter Property="Fill" Value="#2ECC71" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Starting}">
+                    <Setter Property="Fill" Value="#F5A623" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Stopping}">
+                    <Setter Property="Fill" Value="#F5A623" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Faulted}">
+                    <Setter Property="Fill" Value="#E5484D" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Target selection -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center">
+                <RadioButton Content="Display"
+                             IsChecked="{Binding IsDisplayKind}"
+                             IsEnabled="{Binding CanChooseTarget}"
+                             Margin="0,0,12,0"
+                             AutomationProperties.AutomationId="TargetKindDisplay" />
+                <RadioButton Content="Window"
+                             IsChecked="{Binding IsWindowKind}"
+                             IsEnabled="{Binding CanChooseTarget}"
+                             AutomationProperties.AutomationId="TargetKindWindow" />
+            </StackPanel>
+
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding Options}"
+                      SelectedItem="{Binding SelectedOption}"
+                      DisplayMemberPath="Label"
+                      IsEnabled="{Binding CanChooseTarget}"
+                      AutomationProperties.AutomationId="TargetSelector"
+                      AutomationProperties.Name="Capture target" />
+
+            <Button Grid.Column="2"
+                    Content="Refresh"
+                    Command="{Binding RefreshCommand}"
+                    Margin="8,0,0,0"
+                    Padding="12,4"
+                    AutomationProperties.AutomationId="RefreshButton" />
+        </Grid>
+
+        <!-- Start / stop and status -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Content="Start capture"
+                    Command="{Binding StartCommand}"
+                    Padding="16,6"
+                    Margin="0,0,8,0"
+                    AutomationProperties.AutomationId="StartCaptureButton" />
+            <Button Grid.Column="1"
+                    Content="Stop capture"
+                    Command="{Binding StopCommand}"
+                    Padding="16,6"
+                    AutomationProperties.AutomationId="StopCaptureButton" />
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Ellipse Style="{StaticResource StatusDot}" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding StatusText}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           AutomationProperties.AutomationId="CaptureStatusText" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Live preview -->
+        <Border Grid.Row="2"
+                Background="#0B0B0C"
+                BorderBrush="#33FFFFFF"
+                BorderThickness="1"
+                CornerRadius="4"
+                ClipToBounds="True"
+                MinHeight="180">
+            <Grid>
+                <controls:CapturePreview FrameSource="{Binding Frames}"
+                                         AutomationProperties.AutomationId="CapturePreview"
+                                         AutomationProperties.Name="Live capture preview" />
+                <TextBlock Text="No capture running. Choose a display or window and press Start capture."
+                           Opacity="0.55"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Margin="24">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCapturing}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- Frame info and errors -->
+        <StackPanel Grid.Row="3" Margin="0,12,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Target" Style="{StaticResource FieldLabel}" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TargetInfoText}" TextTrimming="CharacterEllipsis"
+                           AutomationProperties.AutomationId="TargetInfoText" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Frame size" Style="{StaticResource FieldLabel}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FrameSizeText}"
+                           AutomationProperties.AutomationId="FrameSizeText" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Frame #" Style="{StaticResource FieldLabel}" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FrameSequenceText}"
+                           AutomationProperties.AutomationId="FrameSequenceText" />
+            </Grid>
+
+            <Border Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}"
+                    Background="#33E5484D"
+                    BorderBrush="#E5484D"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="10,8"
+                    Margin="0,10,0,0"
+                    ToolTip="{Binding ErrorDetail}">
+                <TextBlock Text="{Binding ErrorMessage}"
+                           TextWrapping="Wrap"
+                           AutomationProperties.AutomationId="CaptureErrorText" />
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

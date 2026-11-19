@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Windows platform adapters: screen capture (Windows Graphics Capture), display and window
+    enumeration, and later UI Automation and hotkeys.
+    Depends only on GlyphLens.Core. Must not use WPF (UI lives in GlyphLens.App).
+
+    TFM: net10.0-windows10.0.19041.0 (Windows 10 2004 or later). The versioned Windows TFM makes the
+    SDK reference Microsoft's Windows SDK .NET projection (CsWinRT) automatically, which provides
+    Windows.Graphics.Capture and the WinRT Direct3D11 interop types. 19041 is also the first build
+    that supports capturing a whole monitor through IGraphicsCaptureItemInterop::CreateForMonitor.
+    See docs/CAPTURE.md and docs/decisions/ADR-0005-windows-graphics-capture.md.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>GlyphLens.Windows</RootNamespace>
+    <!-- Required by LibraryImport / COM function-pointer interop source generators. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GlyphLens.Core\GlyphLens.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Direct3D 11 / DXGI bindings (MIT). Used only for GPU frame readback. -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <InternalsVisibleTo Include="GlyphLens.Windows.Tests" />
+  </ItemGroup>
+
+</Project>

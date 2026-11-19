@@ -1,0 +1,30 @@
+# Normalise line endings in the repository; check out with the platform default.
+* text=auto
+
+# Windows-specific files keep CRLF.
+*.sln       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+*.ps1       text eol=crlf
+
+# Shell scripts and CI config keep LF.
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Source files
+*.cs        text diff=csharp
+*.xaml      text
+*.csproj    text
+*.props     text
+*.py        text diff=python
+*.md        text diff=markdown
+*.json      text
+*.toml      text
+
+# Binary files
+*.png       binary
+*.jpg       binary
+*.ico       binary
+*.dll       binary
+*.exe       binary

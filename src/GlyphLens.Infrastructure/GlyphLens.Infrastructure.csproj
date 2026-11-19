@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infrastructure adapters: worker IPC, persistence, cache, logging, configuration.
+    Depends only on GlyphLens.Core. Contains no UI.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GlyphLens.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GlyphLens.Core\GlyphLens.Core.csproj" />
+  </ItemGroup>
+
+</Project>
