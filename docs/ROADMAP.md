@@ -37,10 +37,16 @@ minimised windows (see [CAPTURE-MANUAL-TESTS.md](CAPTURE-MANUAL-TESTS.md)).
 
 ## Phase 2 — UI Automation and OCR
 
-- **Scope:** Accessible text extraction; OCR in the worker; the Named Pipes transport.
+**Phase 2a (worker communication) implemented, test status not yet recorded:** Named Pipes transport with ACL and session-token
+authentication, framing, `worker.initialize`/`health`/`shutdown`, `IWorkerProcessManager` with bounded restarts and a Job Object, the Python
+pipe client, and the WPF worker diagnostics panel. See [IPC-PROTOCOL.md](IPC-PROTOCOL.md) and
+[research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md). **Not implemented:** UI Automation, OCR (PaddleOCR),
+language detection, models, `ocr.detect`, periodic health polling.
+
+- **Scope:** Accessible text extraction; OCR in the worker; the Named Pipes transport (done in 2a).
 - **Deliverables:** `IAccessibilityTextSource` (UI Automation) in `GlyphLens.Windows/Accessibility`;
-  Named Pipes client + `IWorkerProcessManager` in Infrastructure; worker pipe server and
-  `worker.*`/`ocr.detect` handlers; PaddleOCR adapter; local model store layout.
+  (done in 2a: pipe server in the app, pipe client in the worker, `IWorkerProcessManager`, `worker.*` handlers);
+  remaining: `ocr.detect` handler, PaddleOCR adapter, local model store layout.
 - **Dependencies:** Phase 1; **validated PaddleOCR Windows wheels for the chosen Python version**
   (see ADR-0004).
 - **Completion criteria:** Text with correct bounds from Chrome, Edge, a PDF reader and a native

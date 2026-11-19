@@ -1,0 +1,102 @@
+<UserControl x:Class="GlyphLens.App.Views.WorkerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="clr-namespace:GlyphLens.Core.Models;assembly=GlyphLens.Core"
+             xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:WorkerViewModel}"
+             d:DesignWidth="364">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <Style x:Key="StatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{StaticResource StatusIdleBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Ready}">
+                    <Setter Property="Fill" Value="{StaticResource StatusOkBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Starting}">
+                    <Setter Property="Fill" Value="{StaticResource StatusBusyBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Error}">
+                    <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Unavailable}">
+                    <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RowLabel" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+            <Setter Property="Margin" Value="0,4,12,4" />
+        </Style>
+        <Style x:Key="RowValue" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,4" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- Title and status -->
+        <Grid Margin="0,0,0,14">
+            <TextBlock Text="Python worker" Style="{StaticResource SectionTitle}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Ellipse Style="{StaticResource StatusDot}" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" AutomationProperties.AutomationId="WorkerStatusText" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Controls -->
+        <UniformGrid Columns="2" Margin="0,0,0,14">
+            <Button Content="Start worker" Command="{Binding StartCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch" Margin="0,0,4,8" Padding="0,6"
+                    AutomationProperties.AutomationId="StartWorkerButton" />
+            <Button Content="Stop worker" Command="{Binding StopCommand}" HorizontalAlignment="Stretch" Margin="4,0,0,8" Padding="0,6"
+                    AutomationProperties.AutomationId="StopWorkerButton" />
+            <Button Content="Restart" Command="{Binding RestartCommand}" HorizontalAlignment="Stretch" Margin="0,0,4,0" Padding="0,6"
+                    AutomationProperties.AutomationId="RestartWorkerButton" />
+            <Button Content="Refresh health" Command="{Binding RefreshHealthCommand}" HorizontalAlignment="Stretch" Margin="4,0,0,0" Padding="0,6"
+                    AutomationProperties.AutomationId="RefreshHealthButton" />
+        </UniformGrid>
+
+        <!-- What the worker reports -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Process" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WorkerProcessText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerProcessText" />
+            <TextBlock Grid.Row="1" Text="Process ID" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ProcessIdText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerPidText" />
+            <TextBlock Grid.Row="2" Text="IPC" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding IpcText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerIpcText" />
+            <TextBlock Grid.Row="3" Text="Protocol" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ProtocolSummaryText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerProtocolText" />
+            <TextBlock Grid.Row="4" Text="OCR" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding OcrText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerOcrText" />
+            <TextBlock Grid.Row="5" Text="Language detection" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding LanguageDetectionText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerLanguageText" />
+            <TextBlock Grid.Row="6" Text="Translation" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding TranslationText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerTranslationText" />
+            <TextBlock Grid.Row="7" Text="Models" Style="{StaticResource RowLabel}" />
+            <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding ModelsText}" Style="{StaticResource RowValue}" AutomationProperties.AutomationId="WorkerModelsText" />
+        </Grid>
+
+        <TextBlock Text="{Binding RuntimeSummaryText}" Style="{StaticResource MutedText}" FontSize="11" Margin="0,8,0,0" />
+
+        <Border Style="{StaticResource ErrorBanner}" Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
+            <TextBlock Text="{Binding LastError}" TextWrapping="Wrap" AutomationProperties.AutomationId="WorkerErrorText" />
+        </Border>
+    </StackPanel>
+</UserControl>

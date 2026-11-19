@@ -15,7 +15,7 @@ GlyphLens is two cooperating local processes:
 │   GlyphLens.App  ── MVVM shell, overlay windows, side panel, composition root                 │
 │        │                                                                                      │
 │        ├── GlyphLens.Windows        capture · UI Automation · displays/DPI · hotkeys          │
-│        ├── GlyphLens.Infrastructure IPC client · worker process manager · SQLite · cache      │
+│        ├── GlyphLens.Infrastructure IPC connection · worker manager · SQLite · cache (later)  │
 │        └── GlyphLens.Core           models · service contracts · protocol version             │
 │                                                                                               │
 └───────────────────────────────────────────────┬───────────────────────────────────────────────┘
@@ -23,7 +23,7 @@ GlyphLens is two cooperating local processes:
                                                 │  versioned UTF-8 JSON messages
 ┌───────────────────────────────────────────────┴───────────────────────────────────────────────┐
 │ GlyphLens.Worker.exe (packaged Python)                                                        │
-│   runtime (pipe server, dispatch, cancellation)                                               │
+│   runtime (pipe client, dispatch; cancellation planned)                                       │
 │   engines/ocr (PaddleOCR) · engines/language_detection · engines/translation (Argos Translate)│
 │   models (installed model metadata, provenance, integrity)                                    │
 └───────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -37,7 +37,7 @@ Nothing leaves the machine. There is no server component.
 | --- | --- | --- | --- |
 | `GlyphLens.Core` | `net10.0` | Domain models (`ScreenTextRegion`, `TranslationRequest`, …), service interfaces, `ProtocolVersion`. | Reference WPF, Windows APIs, OCR/translation engines, or any other GlyphLens project. |
 | `GlyphLens.Windows` | `net10.0-windows10.0.19041.0` | Windows adapters: Windows Graphics Capture (implemented), monitor/window enumeration (implemented), UI Automation, global hotkeys. Implements `IScreenCaptureService`, `ICaptureTargetProvider`, `IAccessibilityTextSource`. | Use WPF; reference App or Infrastructure. |
-| `GlyphLens.Infrastructure` | `net10.0` | Worker IPC (envelope codec today; Named Pipes client later), worker process manager, SQLite persistence, translation cache, logging, settings. Implements `IOcrEngine`, `ILanguageDetector`, `ITranslationEngine` as IPC proxies, plus `ITranslationCache`, `IWorkerProcessManager`. | Reference WPF, App or Windows. |
+| `GlyphLens.Infrastructure` | `net10.0` | Worker IPC (implemented: envelope codec, framing, `WorkerConnection`, `WorkerProcessManager`; the Windows-only pipe server and launcher live in `GlyphLens.Windows/Worker`), later SQLite persistence, translation cache, logging, settings. Implements `IWorkerProcessManager`; will implement `IOcrEngine`, `ILanguageDetector`, `ITranslationEngine` as IPC proxies and `ITranslationCache` (not yet). | Reference WPF, App or Windows. |
 | `GlyphLens.App` | `net10.0-windows10.0.19041.0` (WPF, x64) | Views, view models, overlay and side-panel windows, composition root. Produces `GlyphLens.exe`. | Contain OCR/translation/detection logic or business logic in code-behind. |
 | `worker/glyphlens_worker` | Python ≥ 3.11 | OCR, language identification, translation, model management behind the IPC protocol. | Own any UI; make network requests at inference time; persist screen content. |
 
@@ -132,14 +132,32 @@ explicit "unavailable" state, surfaced to the user.
 - Consumes the same pipeline output as the overlay; switching modes does not change detection.
 - History is opt-in and stored in SQLite; copy-to-clipboard per item.
 
-## 10. Worker architecture *(planned — Phases 2–4)*
+## 10. Worker architecture *(transport and lifecycle implemented — Phase 2a; engines planned — Phases 2–4)*
 
-- Started and supervised by `IWorkerProcessManager` (Infrastructure). States: `Stopped → Starting
-  → Ready`, or `Unavailable` / `Error`.
-- Single local Named Pipe; one JSON envelope per message; request/response correlated by `requestId`.
+**Implemented (Phase 2a):**
+
+- `WorkerProcessManager` (Infrastructure, implements `IWorkerProcessManager`) starts, supervises and stops the worker. States:
+  `Stopped → Starting → Ready`, or `Error` / `Unavailable`. `Ready` means process + pipe + handshake, not that an engine works.
+- Layering keeps `GlyphLens.Infrastructure` platform-independent: it holds framing, `WorkerConnection` and the manager, and depends
+  on Core interfaces (`IWorkerPipeListenerFactory`, `IWorkerProcessLauncher`, `IWorkerLog`). The Windows-only parts live in
+  `GlyphLens.Windows/Worker`: `NamedPipeWorkerListener` (ACL-restricted server pipe), `WorkerJobObject` (kill-on-close),
+  `PythonWorkerProcessLauncher` and `WorkerLocator`. The App composes them in `App.xaml.cs`.
+- The app hosts the pipe server; the Python worker (`worker/glyphlens_worker`) is the single client, authenticated by a per-session
+  token. Messages: `worker.initialize`, `worker.health`, `worker.shutdown`. Full detail: [IPC-PROTOCOL.md](IPC-PROTOCOL.md).
+- Failure handling: crash/pipe-loss detection, bounded automatic restart with backoff, startup/connect/request timeouts,
+  cancellation, Job Object so the worker cannot outlive the app.
+- The App shows a worker diagnostics panel (`WorkerViewModel`/`WorkerView`): start, stop, restart, refresh health, status, process id,
+  protocol, the worker's health rows and the last error. The worker is never started automatically.
+
+**Not implemented:** OCR, language detection, translation, model management (all reported `not_implemented` / `not_installed` by
+`worker.health`), periodic health polling, and request types beyond the three above (they return `engine_unavailable`).
+
+**Planned:**
+
 - Engines load lazily on `worker.initialize`; models come only from the local model store.
 - The worker never opens network connections during inference. Model download, when implemented,
-  is a separate explicit user action with integrity verification.
+  is a separate explicit user action with integrity verification. Engine dependency compatibility:
+  [research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md).
 
 See [IPC-PROTOCOL.md](IPC-PROTOCOL.md) and [ADR-0004](decisions/ADR-0004-worker-communication.md).
 

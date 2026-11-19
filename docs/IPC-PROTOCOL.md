@@ -1,168 +1,173 @@
 # GlyphLens Worker IPC Protocol
 
-**Protocol version:** 1.0 (draft)
-**Status:** The envelope format and its validation are implemented on both sides
-(`GlyphLens.Infrastructure.IPC.WorkerMessageSerializer`, `glyphlens_worker.protocols.envelope`).
-The transport and all message handlers are **not implemented**. Payload schemas below are
-provisional and will be finalised in the phase that implements each message type.
+**Protocol version:** 1.0
+**Status (Phase 2a):** transport, framing, envelope validation, the handshake and three requests
+(`worker.initialize`, `worker.health`, `worker.shutdown`) are **implemented** on both sides. Everything else
+(`ocr.detect`, `translation.*`, `models.*`) is **not implemented**: the worker answers it with an error, never with a result.
+
+Implementation map:
+
+| Side | Code |
+| --- | --- |
+| .NET framing / connection / manager | `src/GlyphLens.Infrastructure/IPC/` (`WorkerFraming`, `WorkerConnection`, `WorkerProcessManager`, `WorkerMessageSerializer`) |
+| .NET pipe server, job object, launcher | `src/GlyphLens.Windows/Worker/` |
+| Python worker | `worker/glyphlens_worker/` (`runtime/framing.py`, `runtime/pipe.py`, `runtime/dispatcher.py`, `runtime/server.py`, `protocols/envelope.py`) |
+
+Python dependency compatibility for the future engines is recorded separately in
+[research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md).
 
 ## 1. Transport
 
-- **Windows Named Pipe**, full duplex, local machine only.
-- The app (`GlyphLens.exe`) creates a pipe with a random, per-session name
-  (`\\.\pipe\glyphlens-<random>`) and passes the name to the worker on its command line. The pipe
-  is created with an ACL that grants access **only to the current user**, with
-  `PipeOptions.CurrentUserOnly` and remote clients rejected (`PIPE_REJECT_REMOTE_CLIENTS`).
-- The app is the pipe server; the worker connects as the single client. Only one connection is
-  accepted (`maxNumberOfServerInstances = 1`).
-- **Framing:** each message is a 4-byte little-endian unsigned length followed by that many bytes
-  of UTF-8 JSON (no BOM). Messages larger than **16 MiB** are a protocol error.
+- **Windows Named Pipe**, byte mode, full duplex, local machine only. The application is the **server**; the worker is the
+  single **client**.
+- Pipe name: `glyphlens-<32 lowercase hex>` (128 random bits), generated per session by the application
+  (`NamedPipeWorkerListenerFactory`). The worker refuses any other name (exit code 2).
+- **Access control** (explicit DACL replacing the default): (1) *deny* `NT AUTHORITY\NETWORK` everything, so a connection that
+  arrives over the network redirector is refused; (2) *allow* the current user full control. Nobody else (Everyone, Users,
+  Authenticated Users, Anonymous) is granted anything. The owner is the current user.
+- `maxNumberOfServerInstances = 1`: one client at a time. The first instance is created before the worker is launched; after a
+  rejected client is dropped, the next instance is created for the next accept.
+- No TCP or HTTP listener exists.
+- Whether a loopback SMB client is also rejected by the OS (beyond the explicit deny entry) has **not been verified**.
 
-There is no TCP/HTTP listener. The protocol is not reachable from other machines or other users.
+### Framing
 
-## 2. Message envelope
+Each message is a 4-byte **unsigned little-endian** length followed by that many bytes of UTF-8 JSON (no BOM).
 
-Every message, in both directions, is a JSON object with exactly these top-level fields
-(camelCase):
+- Zero-length frames are rejected.
+- Frames larger than **16 MiB** (16 777 216 bytes) are rejected. The length is checked **before** any payload buffer is
+  allocated or read, so a hostile length cannot cause a large allocation.
+- Reads loop until the header or payload is complete (partial reads and writes are handled on both sides); a stream ending
+  mid-frame is a framing error. Clean end of stream between frames means the peer closed.
+- A framing violation cannot be resynchronised and is fatal for the connection.
+
+## 2. Authentication and session token
+
+The application generates a random 256-bit token per session (hex) and passes it to the worker in the environment variable
+`GLYPHLENS_WORKER_TOKEN` (not on the command line, which other processes can read). The worker removes it from its environment
+at startup and **echoes it** as `sessionToken` in `worker.initialize.result`. The application compares it in constant time; a
+client that does not present the token (or never answers the handshake) is disconnected and the pipe accepts again, at most
+`MaxRejectedClients` (3) times within the connect timeout. A peer that answers the handshake with an `error` response, or reports an
+incompatible protocol major, is not retried: the start fails immediately. The token is never logged.
+
+## 3. Message envelope
+
+Every message is a JSON object with these camelCase fields (unknown extra fields are ignored):
 
 | Field | Type | Rules |
 | --- | --- | --- |
-| `protocolVersion` | string | `MAJOR.MINOR`, digits only, no leading zeros, major ≥ 1. |
-| `requestId` | string | 1–128 non-blank characters. The app uses a GUID. Responses echo the request's id. |
-| `messageType` | string | Lowercase dotted identifier, `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`. |
-| `payload` | object \| null | Required field; may be `null`. Shape depends on `messageType`. |
-| `timestamp` | string | ISO 8601 with a UTC offset (e.g. `2026-01-15T10:30:00Z`). Sender clock; informational. |
+| `protocolVersion` | string | `MAJOR.MINOR`, digits only, major >= 1. |
+| `requestId` | string | 1-128 non-blank characters. The app uses a GUID. Responses echo the request id. |
+| `messageType` | string | Lowercase dotted identifier `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`. |
+| `payload` | object or null | The field must be present; may be `null`. |
+| `timestamp` | string | ISO 8601 with a UTC offset. |
 
-Unknown top-level fields are ignored by receivers (forward compatibility).
+## 4. Implemented messages
 
-Example request:
+Successful response type = request type + `.result`; failures use `error`. Both echo the `requestId`.
 
-```json
-{
-  "protocolVersion": "1.0",
-  "requestId": "0f8fad5b-d9cb-469f-a165-70867728950e",
-  "messageType": "worker.health",
-  "payload": null,
-  "timestamp": "2026-01-15T10:30:00Z"
-}
-```
+### `worker.initialize` (must be first)
 
-## 3. Message types
-
-Requests are sent by the app; the worker replies to each with exactly one response.
-
-| Request | Purpose | Provisional payload |
-| --- | --- | --- |
-| `worker.initialize` | Handshake. Negotiates protocol, loads configuration, reports capabilities. Must be the first request. | `{ "modelDirectory": string, "engines": ["ocr", "translation", ...] }` |
-| `worker.health` | Liveness and capability check. | `null` |
-| `worker.shutdown` | Graceful shutdown; worker replies then exits. | `null` |
-| `ocr.detect` | Recognise text in a frame. | `{ "width", "height", "stride", "pixelFormat": "bgra32", "pixels": base64, "languages"?: [...] }` |
-| `translation.translate` | Translate text. | `{ "text", "sourceLanguage": string\|null, "targetLanguage" }` |
-| `translation.cancel` | Cancel an in-flight request. | `{ "targetRequestId": string }` |
-| `models.list` | List installed local models. | `null` |
-| `models.status` | Status of a specific model or language pair. | `{ "modelId" }` or `{ "sourceLanguage", "targetLanguage" }` |
-
-Large frames may later move to a shared-memory section referenced from the payload instead of
-base64; that would be a minor-version addition.
-
-## 4. Request–response correlation
-
-- Each request has a unique `requestId`. The response carries the **same** `requestId`.
-- Successful responses use `messageType` = request type + `.result`
-  (e.g. `translation.translate.result`).
-- Failures use `messageType` = `error` (see §6).
-- Responses may arrive out of order; the app matches them by `requestId` only.
-- A `requestId` must not be reused while the request is in flight. Duplicates are rejected with
-  `error` code `duplicate_request_id`.
-
-## 5. Cancellation
-
-- The app sends `translation.cancel` with `targetRequestId`. (The same mechanism is expected to be
-  generalised to `ocr.detect`.)
-- The worker replies to the cancel request itself with `translation.cancel.result`
-  `{ "cancelled": bool }` (`false` if the target had already completed or is unknown).
-- If cancelled, the **target** request receives an `error` response with code `cancelled`. Every
-  request therefore still receives exactly one response.
-- On the .NET side, a `CancellationToken` triggers the cancel message and the awaiting task
-  completes with `OperationCanceledException`.
-
-## 6. Error responses
+Request payload: `{ "clientProtocolVersion": "1.0" }`. Result payload:
 
 ```json
-{
-  "protocolVersion": "1.0",
-  "requestId": "<id of the failed request>",
-  "messageType": "error",
-  "payload": { "code": "model_not_installed", "message": "No model for ja→en.", "retryable": false },
-  "timestamp": "2026-01-15T10:30:01Z"
-}
+{ "workerVersion": "0.1.0", "protocolVersion": "1.0", "python": "3.12.10",
+  "sessionToken": "<echo of GLYPHLENS_WORKER_TOKEN>",
+  "engines": { "ocr": "not_implemented", "languageDetection": "not_implemented", "translation": "not_implemented" } }
 ```
 
-Planned error codes: `invalid_message`, `unsupported_protocol_version`, `unknown_message_type`,
-`not_initialized`, `duplicate_request_id`, `cancelled`, `timeout`, `model_not_installed`,
-`engine_unavailable`, `payload_too_large`, `internal_error`.
+A different **major** client version is refused (`unsupported_protocol_version`); repeating initialize is harmless.
 
-- `message` is for logs/diagnostics. It **must not contain recognised screen text or translations**.
-- If a message is so malformed that its `requestId` cannot be read, the worker logs it and
-  replies with `requestId` `"unknown"`; the app treats repeated invalid messages as a fatal
-  protocol failure and restarts the worker.
+### `worker.health`
 
-## 7. Worker startup
+Request payload `null`. Result payload (state values are lower snake case):
 
-1. App sets `IWorkerProcessManager.Status = Starting`, creates the pipe, launches
-   `GlyphLens.Worker.exe --pipe <name>` with no console window.
-2. Worker connects within the **startup timeout (default 30 s)**; otherwise → `Error`.
-3. App sends `worker.initialize`. The worker validates the protocol version and replies with
-   `worker.initialize.result` `{ "workerVersion", "protocolVersion", "engines": { name: status } }`.
-4. If required engines/models are missing → `Unavailable` (worker stays connected for
-   `models.*` queries); otherwise → `Ready`.
-5. Any request other than `worker.initialize` before initialization gets `error` `not_initialized`.
+```json
+{ "process": "ready", "ipc": "connected", "protocol": "initialized",
+  "engines": { "ocr": "not_implemented", "languageDetection": "not_implemented", "translation": "not_implemented" },
+  "models": "not_installed", "workerVersion": "...", "protocolVersion": "1.0", "python": "...", "pid": 1234 }
+```
 
-## 8. Worker shutdown
+Each field is a separate fact: a live worker never marks an engine ready. The application shows these as upper snake case
+(`NOT_IMPLEMENTED`, `NOT_INSTALLED`). Unrecognised values parse as `unknown`, never as healthy.
 
-1. App sends `worker.shutdown`; worker stops accepting new requests, cancels in-flight work,
-   replies `worker.shutdown.result`, closes the pipe and exits with code 0.
-2. If the process has not exited within the **shutdown grace period (default 5 s)**, the app
-   terminates it.
-3. If the app exits or the pipe breaks, the worker exits on its own (it never outlives the app).
-   The app also places the worker in a Windows Job Object with kill-on-close.
+### `worker.shutdown`
 
-## 9. Timeouts
+Request payload `null`. Result `{ "status": "stopping" }`, then the worker exits with code 0.
 
-| Operation | Default (provisional) |
+### Not implemented
+
+`ocr.detect`, `translation.translate`, `translation.cancel`, `models.list`, `models.status` are known types and receive
+`error` / `engine_unavailable`. Any other type receives `unknown_message_type`. Cancellation semantics for engine requests are
+therefore not yet exercised.
+
+## 5. Errors
+
+```json
+{ "protocolVersion": "1.0", "requestId": "<id>", "messageType": "error",
+  "payload": { "code": "not_initialized", "message": "...", "retryable": false }, "timestamp": "..." }
+```
+
+Codes the worker actually emits: `invalid_message`, `unsupported_protocol_version`, `unknown_message_type`,
+`not_initialized`, `engine_unavailable`, `payload_too_large`, `internal_error`. (`timeout`, `cancelled`,
+`duplicate_request_id`, `model_not_installed` from the earlier draft are not used yet.)
+
+- Error messages and logs never contain payload content.
+- A well-framed but invalid message (bad JSON, invalid UTF-8, bad envelope, missing request id, unsupported version) gets an error
+  response (`requestId` is echoed if readable, else `"unknown"`) and the worker keeps serving. **Five invalid messages in a row**
+  are fatal (exit 4); a valid message resets the count.
+- A framing violation (zero length, oversized, truncated): best-effort error, then exit 4.
+- On the .NET side, any invalid message from the worker closes the connection and fails all waiting requests.
+
+## 6. Correlation, concurrency, timeouts
+
+- Requests are correlated by `requestId`; responses may arrive in any order. At most 32 requests may wait at once (more are
+  rejected, not queued). Late or unsolicited responses are ignored and logged without content.
+- The worker handles one request at a time.
+- Defaults (`WorkerManagerOptions`): connect 15 s, initialize 10 s, request (health) 5 s, shutdown acknowledgement 3 s, graceful
+  exit 5 s. A request timeout does not close the connection. Three consecutive health timeouts treat the worker as hung (killed
+  and restarted). **Periodic health polling is not implemented**; health is queried at start and on demand.
+
+## 7. Worker lifecycle
+
+1. The manager creates a listener (new pipe name + token) and launches
+   `python -E -X utf8 -u -m glyphlens_worker --pipe <name>` from the worker directory, no console window, stdout/stderr redirected
+   and drained (last 20 sanitised error lines kept for diagnostics).
+2. The worker connects with plain `open(r"\\.\pipe\<name>", "r+b", buffering=0)`, retrying while the pipe is missing or busy
+   (a busy pipe is reported by the C runtime as `OSError(errno=22)` without `winerror`; access denied fails immediately).
+3. The app sends `worker.initialize`, verifies token and protocol major, then `worker.health`; status becomes **Ready**.
+   Ready means process + pipe + handshake, **not** that any engine works.
+4. Stop: `worker.shutdown`; if not acknowledged/exited in time the process (tree) is killed.
+5. Unexpected exit or lost pipe: status Error, then up to **5** automatic restarts with exponential backoff **1 s, 2 s, 4 s ... capped at
+   60 s**; after that Unavailable. A worker that ran >= 60 s before failing resets the budget; an explicit start/restart resets it.
+   Nothing restarts after an intentional stop; Stop cancels an in-flight start or backoff delay. A missing interpreter or worker
+   package is not retried.
+6. If the application dies, a kill-on-close **Job Object** ends the worker. Limitation: a process cannot be created suspended, so
+   there is a short window before assignment (this matters for virtual-environment launcher stubs); the worker therefore also exits
+   itself when the pipe closes (exit 5).
+
+Interpreter discovery: explicit option, then `GLYPHLENS_PYTHON`, then `python.exe` on `PATH` (skipping `WindowsApps` Store stubs), then the
+`py` launcher; each candidate is executed once to confirm Python >= 3.11. The worker package is found via `GLYPHLENS_WORKER_DIR` or by
+walking up from the application directory.
+
+## 8. Worker exit codes
+
+| Code | Meaning |
 | --- | --- |
-| Worker connect + `worker.initialize` | 30 s (model loading may be slow on first start) |
-| `worker.health` | 2 s |
-| `ocr.detect` | 10 s |
-| `translation.translate` | 10 s |
-| `worker.shutdown` grace | 5 s |
+| 0 | Clean shutdown after `worker.shutdown`. |
+| 2 | Usage / invalid pipe name. |
+| 3 | Could not connect to the pipe. |
+| 4 | Protocol violation (framing error, or too many invalid messages). |
+| 5 | Pipe lost (application closed it without shutdown, or write failed). |
+| 6 | Session token missing or invalid. |
 
-On timeout the app cancels the request (§5) and completes it with a timeout error. Repeated
-health-check timeouts mark the worker `Error` and trigger a restart.
+## 9. Version compatibility
 
-## 10. Process crashes
+Compatible when major versions match; minor versions add optional fields or message types. Breaking changes require a major bump, an
+update here and an ADR. Authoritative values: `ProtocolVersion.Current` (.NET), `PROTOCOL_VERSION` (Python).
 
-- The app monitors the worker process handle and the pipe. On unexpected exit or pipe break:
-  all in-flight requests fail with a "worker unavailable" error, status becomes `Error`.
-- Automatic restart with exponential backoff (e.g. 1 s, 2 s, 4 s … max 60 s); after 5 consecutive
-  failures within 5 minutes, stop restarting and show the user a clear error.
-- Crash diagnostics are logged locally without screen content.
+## 10. Security constraints
 
-## 11. Version compatibility
-
-- Peers are **compatible when the major versions match.** Minor versions only add optional
-  payload fields or new message types.
-- Receivers ignore unknown fields. A receiver that gets an unknown `messageType` replies
-  `error` `unknown_message_type` rather than failing.
-- Incompatible major version → `error` `unsupported_protocol_version` during `worker.initialize`;
-  the app reports the worker as `Unavailable` (likely a mismatched install).
-- Breaking changes require a major version bump, an update to this document and an ADR.
-- The authoritative versions are `ProtocolVersion.Current` (.NET) and `PROTOCOL_VERSION` (Python).
-
-## 12. Security constraints
-
-- Local pipe only, current-user ACL, remote clients rejected, single client, random name.
-- The protocol has **no** message that executes code, loads arbitrary files outside the model
-  directory, or opens network connections. New message types must preserve this.
-- All input is validated (envelope rules above, size limit, payload schema) before dispatch.
-- Neither side logs payload contents (screen text, pixels, translations).
+Local pipe only; current-user ACL with explicit network deny; single client; unique unguessable name; session token handshake; strict
+validation and size limit before dispatch; no message executes code, reads arbitrary paths or opens network connections; no payloads
+in logs. The worker itself makes no network requests (it has no dependencies in this milestone).

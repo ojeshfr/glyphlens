@@ -42,13 +42,21 @@ than necessary.
 
 ## Secure local worker communication
 
-See [IPC-PROTOCOL.md §1 and §12](IPC-PROTOCOL.md):
+Implemented in Phase 2a (see [IPC-PROTOCOL.md](IPC-PROTOCOL.md)):
 
-- Windows Named Pipe with a random per-session name, current-user-only ACL, remote clients rejected,
-  single client connection.
-- Strict envelope validation, a 16 MiB message limit and an allow-list of message types.
-- No protocol message executes code, opens network connections or reads arbitrary paths.
-- The worker exits when the app exits (Job Object, pipe break).
+- Windows Named Pipe, unique per session (`glyphlens-` + 128 random bits). The worker refuses any other name.
+- Explicit pipe DACL: deny `NT AUTHORITY\NETWORK`, allow only the current user; one server instance, so one client at a time.
+  (Whether a loopback SMB client is rejected beyond that deny entry is not verified.)
+- Per-session random token passed in the environment (not the command line) and echoed in `worker.initialize.result`; clients that
+  fail it are disconnected (bounded retries). A same-user process that wins the pipe first still cannot become the worker.
+  Same-user processes remain inside the trust boundary otherwise.
+- Strict envelope validation, a 16 MiB limit checked before allocation, zero-length rejected, malformed input answered with an error
+  or a closed connection, and an allow-list of message types. No message executes code, opens network connections or reads paths.
+- The worker is launched with `python -E -X utf8`, ignoring `PYTHONPATH`/`PYTHONHOME`.
+- The worker cannot outlive the app: kill-on-close Job Object (short assignment race documented) and the worker exits when the
+  pipe closes.
+- Logs record request id, message type, outcome and duration only, never payloads or the token.
+- The worker has no third-party dependencies and makes no network requests; nothing is downloaded or installed at startup or by health checks.
 
 ## Model provenance
 

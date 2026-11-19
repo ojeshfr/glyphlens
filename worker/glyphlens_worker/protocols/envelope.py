@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from glyphlens_worker import PROTOCOL_VERSION
@@ -38,6 +38,10 @@ _REQUIRED_FIELDS = ("protocolVersion", "requestId", "messageType", "payload", "t
 
 class ProtocolError(ValueError):
     """Raised when a message does not conform to the GlyphLens worker protocol."""
+
+
+class UnsupportedVersionError(ProtocolError):
+    """The message's major protocol version is not the one this worker speaks."""
 
 
 @dataclass(frozen=True)
@@ -75,7 +79,7 @@ def validate(message: object) -> Envelope:
 
     version = message["protocolVersion"]
     if not is_compatible(version):
-        raise ProtocolError(
+        raise UnsupportedVersionError(
             f"unsupported protocolVersion {version!r}; this worker speaks {PROTOCOL_VERSION}"
         )
 
@@ -108,6 +112,39 @@ def validate(message: object) -> Envelope:
         payload=message["payload"],
         timestamp=timestamp,
     )
+
+
+def _timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def encode(message_type: str, request_id: str, payload: Any) -> bytes:
+    """Encode one envelope as compact UTF-8 JSON (camelCase field names, as the .NET side expects)."""
+    message = {
+        "protocolVersion": PROTOCOL_VERSION,
+        "requestId": request_id,
+        "messageType": message_type,
+        "payload": payload,
+        "timestamp": _timestamp(),
+    }
+    return json.dumps(message, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
+def encode_error(request_id: str, code: str, message: str, retryable: bool = False) -> bytes:
+    """Encode an ``error`` response. ``message`` must never contain message content."""
+    return encode("error", request_id, {"code": code, "message": message, "retryable": retryable})
+
+
+def extract_request_id(data: bytes) -> str:
+    """Best-effort ``requestId`` of a message that failed validation, so the error can still be correlated."""
+    try:
+        message = json.loads(data.decode("utf-8"))
+        request_id = message.get("requestId") if isinstance(message, dict) else None
+    except (UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+        return "unknown"
+    if isinstance(request_id, str) and request_id.strip() and len(request_id) <= MAX_REQUEST_ID_LENGTH:
+        return request_id
+    return "unknown"
 
 
 def decode(data: bytes) -> Envelope:

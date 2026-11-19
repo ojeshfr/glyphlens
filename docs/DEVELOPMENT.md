@@ -84,8 +84,24 @@ Run `dotnet format GlyphLens.sln` to apply fixes. Style rules live in `.editorco
 
 ## Worker setup
 
-The worker uses only the standard library in Phase 0, so no virtual environment is required. When
-engine dependencies are added (Phase 2+), use a project-local virtual environment:
+The worker uses only the standard library, so no virtual environment is required. The application starts it itself from
+the diagnostics panel (**Start worker**); it is never started automatically.
+
+- **Interpreter:** Python 3.11 or newer. Discovery order: `GLYPHLENS_PYTHON` (a configured path is never silently replaced), then `python.exe`
+  on `PATH` (Microsoft Store `WindowsApps` stubs are skipped), then the `py` launcher. Each candidate is run once to confirm its version.
+- **Worker package:** found via `GLYPHLENS_WORKER_DIR` (the directory containing `glyphlens_worker`) or by walking up from the application directory
+  (works from a repo build output).
+- **Run it by hand:** `python -m glyphlens_worker --version`, `--health` (a standalone, unconnected report). `--pipe` is for the application only: it
+  requires a generated pipe name and `GLYPHLENS_WORKER_TOKEN`.
+- **Worker tests:** `cd worker; python -m unittest discover -s tests -t .`
+- **Worker integration tests (.NET -> real Python):** `dotnet test tests/GlyphLens.Windows.Tests --filter "FullyQualifiedName~Worker"`. They run
+  whenever Python 3.11+ and the worker package are found (CI installs Python) and are skipped with a visible reason otherwise. They need no models,
+  GPU or network. Manager logic against fake workers is in `tests/GlyphLens.Infrastructure.Tests/IPC`; the view model in `tests/GlyphLens.App.Tests`.
+  Current pass/fail status is not recorded here; run them.
+- **Debugging:** worker request logs (id, type, outcome, ms) go to the .NET trace output; the worker's stderr tail is included in start-failure messages.
+
+When engine dependencies are added (later phases), use a project-local virtual environment (see
+[research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md) for the evaluated stack):
 
 ```powershell
 cd worker

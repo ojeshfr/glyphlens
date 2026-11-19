@@ -55,18 +55,21 @@ class CliTests(unittest.TestCase):
         code, output = self.run_main("--health")
         self.assertEqual(code, 0)
         report = json.loads(output)
-        self.assertEqual(report["version"], glyphlens_worker.__version__)
+        self.assertEqual(report["workerVersion"], glyphlens_worker.__version__)
         self.assertEqual(report["protocolVersion"], glyphlens_worker.PROTOCOL_VERSION)
 
-    def test_health_reports_engines_as_not_implemented(self) -> None:
+    def test_standalone_health_reports_a_running_but_unconnected_worker_with_no_engines(self) -> None:
         report = worker_main.health_report()
-        self.assertEqual(report["status"], "unavailable")
-        self.assertEqual(report["transport"], "not_implemented")
+
+        self.assertEqual(report["process"], "ready")
+        self.assertEqual(report["ipc"], "disconnected")
+        self.assertEqual(report["protocol"], "not_initialized")
         self.assertEqual(
             report["engines"],
-            {"ocr": "not_implemented", "language_detection": "not_implemented",
+            {"ocr": "not_implemented", "languageDetection": "not_implemented",
              "translation": "not_implemented"},
         )
+        self.assertEqual(report["models"], "not_installed")
 
     def test_requires_exactly_one_option(self) -> None:
         for argv in ([], ["--version", "--health"]):

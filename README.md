@@ -3,9 +3,10 @@
 **A privacy-first, offline Windows screen translation application that detects and translates text
 across desktop applications using OCR and accessibility APIs.**
 
-> **Status: Phase 1 — screen capture.** GlyphLens can capture a display or an application window and
-> show a live preview, to verify the capture engine. **It does not read (OCR / accessibility) or
-> translate anything yet.** Frames stay in memory; nothing is saved or sent anywhere. See
+> **Status: Phase 2a — worker communication (on top of Phase 1 capture).** GlyphLens can capture a display
+> or window with a live preview, and start, health-check and stop a separate Python worker over a secure
+> local Named Pipe. **It does not read (OCR / accessibility) or translate anything yet; the worker reports
+> OCR, language detection and translation as NOT_IMPLEMENTED.** Frames stay in memory; nothing is saved or sent anywhere. See
 > [Current development status](#current-development-status).
 
 ---
@@ -37,9 +38,14 @@ Privacy and offline operation are core requirements, not optional extras.
 | --- | --- |
 | Repository, solution, CI, docs, ADRs | ✅ Implemented (Phase 0) |
 | Domain models and service contracts (`GlyphLens.Core`) | ✅ Implemented (contracts only) |
-| IPC envelope format and validation (.NET + Python) | ✅ Implemented (no transport) |
+| IPC envelope, framing and validation (.NET + Python) | ✅ Implemented |
+| Named Pipes transport (ACL, session token), Python worker pipe client, `worker.initialize` / `health` / `shutdown` | ✅ Implemented (Phase 2a) — see [docs/IPC-PROTOCOL.md](docs/IPC-PROTOCOL.md) |
+| Worker lifecycle manager (bounded restarts, Job Object) and WPF worker diagnostics panel | ✅ Implemented (Phase 2a) |
+| OCR, language detection, translation, models in the worker | ⏳ Not implemented (reported `NOT_IMPLEMENTED` / `NOT_INSTALLED`) |
+| Python engine compatibility (PaddleOCR, Argos Translate, CTranslate2) | 📄 Evaluated — [report](docs/research/PYTHON-ENGINE-COMPATIBILITY.md) |
+| Pipe ACL verification | 📄 [report](docs/research/PIPE-ACL-VERIFICATION.md) |
 | WPF application: capture diagnostic with target selector, start/stop, live preview, status and errors | ✅ Implemented (Phase 1) |
-| Python worker `--version` / `--health` diagnostics | ✅ Implemented |
+| Python worker `--version` / `--health` / `--pipe` | ✅ Implemented |
 | Screen capture of a display or window (Windows Graphics Capture) | ✅ Implemented (Phase 1) — see [docs/CAPTURE.md](docs/CAPTURE.md) |
 | Region capture | ⏳ Planned — next capture milestone |
 | Multi-monitor / mixed-DPI / Windows 10 verification | ⏳ Not yet verified on hardware — [checklist](docs/CAPTURE-MANUAL-TESTS.md) |
@@ -48,7 +54,7 @@ Privacy and offline operation are core requirements, not optional extras.
 | Offline translation (Argos Translate) | ⏳ Planned — Phase 4 |
 | Floating overlay | ⏳ Planned — Phase 5 |
 | Side panel and history | ⏳ Planned — Phase 6 |
-| Named Pipes transport, SQLite cache, hotkeys | ⏳ Planned |
+| SQLite cache, hotkeys | ⏳ Planned |
 | Installer and releases | ⏳ Planned — Phase 8 |
 
 ## Planned capabilities
@@ -70,7 +76,7 @@ Privacy and offline operation are core requirements, not optional extras.
 | Accessible text (planned) | Microsoft UI Automation |
 | OCR (proposed) | PaddleOCR, in a local Python worker |
 | Translation (proposed) | Argos Translate, in a local Python worker |
-| App ↔ worker IPC (planned) | Versioned UTF-8 JSON over Windows Named Pipes |
+| App ↔ worker IPC | Versioned UTF-8 JSON over Windows Named Pipes, length-prefixed frames (implemented) |
 | Storage (planned) | SQLite |
 | Tests | xUnit (.NET), `unittest` (Python) |
 | CI | GitHub Actions on `windows-latest` |
@@ -87,7 +93,7 @@ GlyphLens/
 │   ├── GlyphLens.Core/            Platform-independent models, contracts, capture state machine and frame mailbox
 │   ├── GlyphLens.Windows/         Windows adapters (Windows Graphics Capture, target enumeration; later UI Automation, hotkeys)
 │   └── GlyphLens.Infrastructure/  IPC, persistence, cache, logging, configuration
-├── worker/                        Python inference worker (future GlyphLens.Worker.exe)
+├── worker/                        Python worker: pipe client + health/shutdown (engines not yet; future GlyphLens.Worker.exe)
 │   ├── glyphlens_worker/
 │   └── tests/
 ├── tests/                         xUnit test projects (Core, Infrastructure, Windows)
@@ -110,7 +116,9 @@ cd GlyphLens
 dotnet restore GlyphLens.sln
 ```
 
-The Python worker currently uses only the standard library; no `pip install` is needed.
+The Python worker currently uses only the standard library; no `pip install` is needed. The app finds Python 3.11+
+(`GLYPHLENS_PYTHON`, then `PATH`, then the `py` launcher) and the worker package itself; start it from the app's
+"Worker diagnostics" panel. Engine dependency research: [docs/research/PYTHON-ENGINE-COMPATIBILITY.md](docs/research/PYTHON-ENGINE-COMPATIBILITY.md).
 
 ## Build
 
@@ -140,6 +148,13 @@ Formatting check (also run in CI):
 dotnet format GlyphLens.sln --verify-no-changes
 ```
 
+Worker tests across the real process boundary (.NET manager, real pipe, real Python worker; no models) run
+whenever Python 3.11+ is found, and are skipped with a visible reason otherwise:
+
+```powershell
+dotnet test tests/GlyphLens.Windows.Tests -c Release --filter "FullyQualifiedName~Worker"
+```
+
 No test requires internet access or AI models. Tests that need a real display, GPU and windows are skipped
 unless you opt in (they never run silently in CI):
 
@@ -164,8 +179,8 @@ See [docs/SECURITY.md](docs/SECURITY.md).
 | Phase | Goal |
 | --- | --- |
 | 0 | Repository and foundation ✅ |
-| 1 | Windows screen capture ← **current** (display and window capture done; region capture pending) |
-| 2 | UI Automation and OCR |
+| 1 | Windows screen capture ✅ (display and window; region capture pending) |
+| 2 | UI Automation and OCR ← **current**: 2a worker communication done; UI Automation and OCR pending |
 | 3 | Text fusion and language detection |
 | 4 | Offline translation |
 | 5 | Floating translation overlay |
@@ -179,7 +194,7 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Screen capture](docs/CAPTURE.md) and its [verification record / manual checklist](docs/CAPTURE-MANUAL-TESTS.md)
-- [IPC protocol](docs/IPC-PROTOCOL.md)
+- [IPC protocol](docs/IPC-PROTOCOL.md) · [Python engine compatibility](docs/research/PYTHON-ENGINE-COMPATIBILITY.md) · [Pipe ACL verification](docs/research/PIPE-ACL-VERIFICATION.md)
 - [Development guide](docs/DEVELOPMENT.md)
 - [Testing](docs/TESTING.md)
 - [Security](docs/SECURITY.md)

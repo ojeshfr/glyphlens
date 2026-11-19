@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\GlyphLens.Windows\GlyphLens.Windows.csproj" />
     <ProjectReference Include="..\..\src\GlyphLens.Core\GlyphLens.Core.csproj" />
+    <ProjectReference Include="..\..\src\GlyphLens.Infrastructure\GlyphLens.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

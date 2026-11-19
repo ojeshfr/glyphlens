@@ -6,6 +6,12 @@ intends to use [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (Phase 2a: worker communication)
+
+- Named Pipe IPC between the app and the Python worker (ACL, session token, 16 MiB framing), `IWorkerProcessManager` implementation with
+  bounded restarts and a Job Object, Python pipe client, and a WPF worker diagnostics panel. OCR, language detection and translation are
+  still not implemented. See `docs/IPC-PROTOCOL.md`.
+
 ### Added (Phase 1: screen capture)
 
 - Windows Graphics Capture of a display or an application window, with a live preview in the WPF app

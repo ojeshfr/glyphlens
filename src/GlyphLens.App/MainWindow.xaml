@@ -8,43 +8,60 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="{Binding ProductName}"
-        Width="900"
-        Height="700"
-        MinWidth="640"
-        MinHeight="520"
+        Width="1240"
+        Height="780"
+        MinWidth="980"
+        MinHeight="640"
+        Background="{StaticResource WindowBrush}"
         WindowStartupLocation="CenterScreen">
-    <Grid Margin="24,20,24,20">
+    <Grid Margin="24,18,24,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="{Binding ProductName}"
-                       FontSize="28"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="{Binding Tagline}"
-                       Opacity="0.65"
-                       FontSize="13"
-                       TextWrapping="Wrap" />
-        </StackPanel>
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="36" Height="36" CornerRadius="9" Background="{StaticResource AccentBrush}" Margin="0,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Text="G" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ProductName}" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Tagline}" Style="{StaticResource MutedText}" FontSize="12" />
+                </StackPanel>
+            </StackPanel>
+            <TextBlock Text="{Binding VersionInfo}" Style="{StaticResource MutedText}" FontSize="12"
+                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
 
-        <views:CaptureView Grid.Row="1" DataContext="{Binding Capture}" />
+        <!-- Body: capture on the left, worker and about on the right -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="400" />
+            </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="2" Margin="0,14,0,0">
-            <TextBlock Text="{Binding FoundationStatus}"
-                       FontSize="12"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap" />
-            <TextBlock Text="{Binding FeatureStatus}"
-                       Opacity="0.65"
-                       FontSize="12"
-                       TextWrapping="Wrap" />
-            <TextBlock Text="{Binding VersionInfo}"
-                       Opacity="0.5"
-                       FontSize="11"
-                       Margin="0,4,0,0" />
-        </StackPanel>
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <views:CaptureView DataContext="{Binding Capture}" />
+            </Border>
+
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <views:WorkerView DataContext="{Binding Worker}" />
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="About this build" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
+                            <TextBlock Text="{Binding FoundationStatus}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding FeatureStatus}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Window>

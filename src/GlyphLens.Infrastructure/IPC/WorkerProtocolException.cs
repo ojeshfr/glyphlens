@@ -3,7 +3,7 @@ namespace GlyphLens.Infrastructure.IPC;
 /// <summary>
 /// Thrown when a message does not conform to the GlyphLens worker protocol.
 /// </summary>
-public sealed class WorkerProtocolException : Exception
+public class WorkerProtocolException : Exception
 {
     public WorkerProtocolException()
     {
