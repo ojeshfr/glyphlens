@@ -55,6 +55,25 @@ desktop). Script is not part of the repository; results below were observed.
 | Closing the application while capturing exits with code 0 in about 0.5 s | PASS |
 | Preview shows the captured window, preserving aspect ratio, in the dark theme (rendered with `PrintWindow` of the GlyphLens window only) | PASS (visually inspected) |
 
+## 3b. OCR verification (Phase 2b)
+
+The built `GlyphLens.exe` was driven through UI Automation against a **controlled test window** (a separate process showing
+two lines of known text), not against real user content. Environment as above; Windows OCR had **one language installed
+(en-US)**. The script is not part of the repository; results below were observed.
+
+| Check | Result |
+| --- | --- |
+| Read text is disabled before a capture and enabled while capturing | PASS |
+| Read text on the captured window recognised "Hello GlyphLens OCR 2026" and "Second line of text" (plus the window title and the close button "x": 4 lines in total), status "4 lines · 47 ms · en-US" | PASS |
+| Overlay boxes are drawn over the picture and line up with the recognised lines (visual inspection of a `PrintWindow` render of the GlyphLens window only) | PASS (visually inspected) |
+| Live toggle on: lines are read, manual Read text is disabled while live; toggle off: Read text is enabled again | PASS |
+| Stopping the capture clears the results list, the boxes and the status | PASS |
+| Closing the application exits with code 0 | PASS |
+
+Not tested: languages other than English, rotated text, small or low-contrast text, a language that is not installed (covered
+by an automated test only), display capture of real application content, clipboard copy in the real app (covered by a view-model
+test only), and behaviour on a machine with no OCR language installed.
+
 ## 4. Manual checklist (humans with the relevant hardware)
 
 | # | Scenario | Steps | Expected | Status |

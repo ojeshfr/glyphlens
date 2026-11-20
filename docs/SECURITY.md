@@ -32,6 +32,21 @@ than necessary.
   frame in the app's own window only.
 - Known privacy consideration: while capturing a display, the GlyphLens window itself is visible in the capture.
 
+## Text recognition (Phase 2b)
+
+- Recognition runs **locally and offline** with the built-in Windows OCR (`Windows.Media.Ocr`) inside the GlyphLens process.
+  GlyphLens adds no network call, downloads nothing and installs no packages or language packs; Windows manages the OCR
+  languages. (That Windows OCR itself makes no network requests is Microsoft's documented behaviour; it was not independently
+  verified here, for example with a network capture.)
+- Recognition happens only on user action: **Read text** or the **Live** toggle, on the captured frame the user chose to
+  capture. Live reading ends when the user turns it off, when capture stops or faults, and when the application exits.
+- Recognised text lives **only in memory** (the OCR view model and the overlay state). It is never written to disk, logged,
+  uploaded or sent to the worker. It is cleared when capture stops.
+- Error messages never include recognised or captured text: an unexpected exception is shown by its type only.
+- The clipboard is touched **only** when the user presses Copy.
+- The recognised text and boxes are visible in GlyphLens's own window, so they appear in any screenshot of it; this is a
+  consideration when sharing screenshots (see the issue template guidance).
+
 ## No unnecessary screen-data persistence
 
 - Captured frames are held in memory only and discarded after processing.

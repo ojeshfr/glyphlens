@@ -89,8 +89,15 @@
         <!-- Live preview -->
         <Border Grid.Row="2" Background="#0A0A0B" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" MinHeight="220">
             <Grid>
-                <controls:CapturePreview FrameSource="{Binding Frames}"
-                                         AutomationProperties.AutomationId="CapturePreview" AutomationProperties.Name="Live capture preview" />
+                <!-- Picture and overlay share one Viewbox so recognised-text boxes are scaled exactly like the picture. -->
+                <Viewbox Stretch="Uniform" StretchDirection="Both">
+                    <Grid>
+                        <controls:CapturePreview FrameSource="{Binding Frames}"
+                                                 AutomationProperties.AutomationId="CapturePreview" AutomationProperties.Name="Live capture preview" />
+                        <controls:OcrOverlay Boxes="{Binding Overlay.Boxes}" Width="{Binding Overlay.FrameWidth}" Height="{Binding Overlay.FrameHeight}"
+                                             HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
+                    </Grid>
+                </Viewbox>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">

@@ -8,16 +8,20 @@ namespace GlyphLens.App.ViewModels;
 /// </summary>
 public sealed class MainViewModel : IDisposable
 {
-    public MainViewModel(CaptureViewModel capture, WorkerViewModel worker)
+    public MainViewModel(CaptureViewModel capture, OcrViewModel ocr, WorkerViewModel worker)
     {
         ArgumentNullException.ThrowIfNull(capture);
+        ArgumentNullException.ThrowIfNull(ocr);
         ArgumentNullException.ThrowIfNull(worker);
         Capture = capture;
+        Ocr = ocr;
         Worker = worker;
         VersionInfo = $"App version {GetAppVersion()} · Worker protocol {ProtocolVersion.Current}";
     }
 
     public CaptureViewModel Capture { get; }
+
+    public OcrViewModel Ocr { get; }
 
     public WorkerViewModel Worker { get; }
 
@@ -25,17 +29,18 @@ public sealed class MainViewModel : IDisposable
 
     public string Tagline { get; } = "Privacy-first, offline screen translation for Windows.";
 
-    public string FoundationStatus { get; } = "Phase 2a: worker communication.";
+    public string FoundationStatus { get; } = "Phase 2b: reading text from the screen.";
 
     public string FeatureStatus { get; } =
-        "Screen capture shows a live preview. The Python worker can be started, checked and stopped over a secure local pipe, "
-        + "but OCR, language detection, accessibility text extraction and translation are not implemented yet. "
-        + "Frames stay in memory: nothing is saved or sent anywhere.";
+        "Capture a display or window, then read its text with Windows OCR (offline). Translation, language detection and "
+        + "accessibility text extraction are not implemented yet, and the Python worker has no engines yet. "
+        + "Frames and recognised text stay in memory: nothing is saved or sent anywhere.";
 
     public string VersionInfo { get; }
 
     public void Dispose()
     {
+        Ocr.Dispose();
         Capture.Dispose();
         Worker.Dispose();
     }

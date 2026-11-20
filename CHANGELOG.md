@@ -6,6 +6,25 @@ intends to use [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (Phase 2b: text recognition)
+
+- `WindowsOcrEngine` (`GlyphLens.Windows/Ocr`): `IOcrEngine` and `IOcrLanguageSource` implemented with the built-in Windows OCR
+  (`Windows.Media.Ocr`), offline, no downloads or packages. One region per recognised line with frame-relative pixel bounds;
+  calls are serialised (a single Windows `OcrEngine` rejects overlapping recognitions); frames over 10 000 px per side are
+  refused. Core: `IOcrLanguageSource`, `OcrLanguage`, `OcrException`/`OcrErrorKind`.
+- App: a Text recognition panel (language selector, Read text, Live reading, results list, Copy), `OcrViewModel`,
+  `OverlayState` and an `OcrOverlay` control that draws boxes inside the same `Viewbox` as the preview. Results are cleared when
+  capture stops. Recognised text stays in memory and is never logged or persisted.
+- Tests: Windows OCR engine tests (skipped with a visible reason when no OCR language is installed), OCR view-model tests,
+  nullable-confidence and `OcrException` tests. New test-only dependency: `System.Drawing.Common` 10.0.15 (Microsoft, MIT).
+  Verification record: `docs/CAPTURE-MANUAL-TESTS.md` section 3b.
+
+### Changed (Phase 2b)
+
+- `ScreenTextRegion.Confidence` is now `double?` (`null` when the engine reports none; Windows OCR reports none). Region
+  coordinates are documented as frame-relative pixels. `MainViewModel` now takes the OCR view model.
+- The main window shows a Text recognition card above the worker card (UI redesign into cards with a shared theme).
+
 ### Added (Phase 2a: worker communication)
 
 - Named Pipe IPC between the app and the Python worker (ACL, session token, 16 MiB framing), `IWorkerProcessManager` implementation with

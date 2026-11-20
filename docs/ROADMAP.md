@@ -40,13 +40,23 @@ minimised windows (see [CAPTURE-MANUAL-TESTS.md](CAPTURE-MANUAL-TESTS.md)).
 **Phase 2a (worker communication) implemented, test status not yet recorded:** Named Pipes transport with ACL and session-token
 authentication, framing, `worker.initialize`/`health`/`shutdown`, `IWorkerProcessManager` with bounded restarts and a Job Object, the Python
 pipe client, and the WPF worker diagnostics panel. See [IPC-PROTOCOL.md](IPC-PROTOCOL.md) and
-[research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md). **Not implemented:** UI Automation, OCR (PaddleOCR),
+[research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md). **Not implemented:** UI Automation, the PaddleOCR engine,
 language detection, models, `ocr.detect`, periodic health polling.
+
+**Phase 2b (text recognition with Windows OCR) implemented:** `WindowsOcrEngine` behind `IOcrEngine` (built-in Windows OCR,
+offline, no downloads or packages, languages = the OCR packs installed in Windows), `IOcrLanguageSource`, `OcrException`,
+and the app's Text recognition panel (language selector, Read text, Live, results list, boxes over the preview, Copy). One
+region per recognised line with frame-relative pixel bounds; `ScreenTextRegion.Confidence` is now `double?` because Windows OCR
+reports none. Verified on one machine with English only, using a controlled test window; see
+[CAPTURE-MANUAL-TESTS.md](CAPTURE-MANUAL-TESTS.md) (section 3b). **Not yet done in Phase 2:** the UI Automation adapter, the
+PaddleOCR engine in the worker (`ocr.detect`, model store), and verification of non-English text, rotated or small
+low-contrast text, and real application content.
 
 - **Scope:** Accessible text extraction; OCR in the worker; the Named Pipes transport (done in 2a).
 - **Deliverables:** `IAccessibilityTextSource` (UI Automation) in `GlyphLens.Windows/Accessibility`;
   (done in 2a: pipe server in the app, pipe client in the worker, `IWorkerProcessManager`, `worker.*` handlers);
-  remaining: `ocr.detect` handler, PaddleOCR adapter, local model store layout.
+  (done in 2b: Windows OCR engine, `IOcrLanguageSource`, text recognition panel with overlay);
+  remaining: UI Automation adapter, `ocr.detect` handler, PaddleOCR adapter, local model store layout.
 - **Dependencies:** Phase 1; **validated PaddleOCR Windows wheels for the chosen Python version**
   (see ADR-0004).
 - **Completion criteria:** Text with correct bounds from Chrome, Edge, a PDF reader and a native

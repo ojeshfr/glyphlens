@@ -12,8 +12,8 @@
 | --- | --- | --- | --- |
 | `GlyphLens.Core.Tests` | xUnit | `tests/GlyphLens.Core.Tests` | Model construction and validation, language codes, capture models, `ProtocolVersion` parsing and compatibility, Core dependency rules. |
 | `GlyphLens.Infrastructure.Tests` | xUnit | `tests/GlyphLens.Infrastructure.Tests` | IPC envelope serialization and validation, contract (model) JSON round-trips, Infrastructure dependency rules. |
-| `GlyphLens.Windows.Tests` | xUnit | `tests/GlyphLens.Windows.Tests` | Windows dependency rules, target-id parsing, row compaction, error mapping, service guard rails; plus **opt-in hardware tests** of real capture (see below). |
-| `GlyphLens.App.Tests` | xUnit | `tests/GlyphLens.App.Tests` | `CaptureViewModel` and `AsyncRelayCommand` against a fake capture service (no window is created). |
+| `GlyphLens.Windows.Tests` | xUnit | `tests/GlyphLens.Windows.Tests` | Windows dependency rules, target-id parsing, row compaction, error mapping, service guard rails; Windows OCR engine tests (see "OCR tests"); worker pipe/launcher tests; plus **opt-in hardware tests** of real capture (see below). |
+| `GlyphLens.App.Tests` | xUnit | `tests/GlyphLens.App.Tests` | `CaptureViewModel`, `WorkerViewModel`, `OcrViewModel`, `OverlayState` and `AsyncRelayCommand` against fake services (no window is created). |
 | Worker tests | `unittest` | `worker/tests` | Package import, `--version`, `--health`, envelope validation and decoding. |
 
 ## Running
@@ -58,6 +58,23 @@ $env:GLYPHLENS_RUN_CAPTURE_TESTS = "1"; dotnet test tests/GlyphLens.Windows.Test
 
 What has actually been run, and what still needs a human with other hardware, is recorded in
 [CAPTURE-MANUAL-TESTS.md](CAPTURE-MANUAL-TESTS.md).
+
+## OCR tests
+
+- **Windows OCR engine** (`tests/GlyphLens.Windows.Tests/Ocr`): known text is rendered into frames with
+  `System.Drawing.Common` (a **test-only** dependency; Microsoft, MIT) and recognised by the real Windows OCR. The tests check the
+  recognised text, that the bounds are frame-relative and overlap where the text was drawn, line order, honest metadata
+  (`Confidence` is `null`), a blank frame, a frame with row padding, an explicitly selected language, concurrent calls, and a
+  language that is not installed. Tests that need an installed OCR language use `[WindowsOcrFact]`: when Windows has none (a
+  stripped install or a CI image) they are **skipped with a visible reason**, not silently passed. Tests that need no language
+  always run: the 10 000 px frame limit, cancellation, null frame, language-list validity, and the mapping helpers
+  (`UnionBounds`, `ToTightPixels`). Whether the language-dependent tests run on the CI image is not recorded here.
+- **Core/Infrastructure:** nullable `Confidence`, `OcrException`, and the JSON round trip of a region without confidence.
+- **OCR view model** (`tests/GlyphLens.App.Tests`): against a fake engine and the fake capture service: read once, results and
+  overlay, live loop (reads the frame already on screen, never queues work during a burst of frames, stops on capture stop or an
+  engine error), results cleared when capture stops, errors that never leak text, language selection, and Copy only on command.
+- Not covered by automated tests: non-English languages, rotated text, small or low-contrast text, and real application
+  content. See [CAPTURE-MANUAL-TESTS.md](CAPTURE-MANUAL-TESTS.md) section 3b.
 
 ## Future test categories (planned)
 

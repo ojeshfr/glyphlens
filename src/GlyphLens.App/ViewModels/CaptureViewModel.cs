@@ -73,6 +73,9 @@ public sealed class CaptureViewModel : ViewModelBase, IDisposable
         _service.StatusChanged += OnServiceStatusChanged;
     }
 
+    /// <summary>Boxes (for example recognised text) drawn over the preview, in frame pixels.</summary>
+    public OverlayState Overlay { get; } = new();
+
     /// <summary>Latest-frame source the preview control renders from.</summary>
     public IFrameSource Frames => _service.Frames;
 

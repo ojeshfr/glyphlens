@@ -291,11 +291,14 @@ public class WorkerViewModelTests
     {
         var manager = new FakeWorkerManager();
         var capture = new CaptureViewModel(new FakeCaptureService(), new FakeTargetProvider(), null);
+        var ocr = new FakeOcr();
+        var ocrVm = new OcrViewModel(ocr, ocr, new FakeCaptureService(), capture.Overlay, null, null, TimeSpan.FromMilliseconds(10));
         var worker = new WorkerViewModel(manager, null);
-        var main = new MainViewModel(capture, worker);
+        var main = new MainViewModel(capture, ocrVm, worker);
 
         Assert.Same(capture, main.Capture);
         Assert.Same(worker, main.Worker);
+        Assert.Same(ocrVm, main.Ocr);
         Assert.Contains("worker", main.FeatureStatus, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not implemented", main.FeatureStatus, StringComparison.OrdinalIgnoreCase);
 

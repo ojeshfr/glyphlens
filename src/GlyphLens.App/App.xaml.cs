@@ -3,6 +3,7 @@ using GlyphLens.App.ViewModels;
 using GlyphLens.Infrastructure.IPC;
 using GlyphLens.Windows.Capture;
 using GlyphLens.Windows.Display;
+using GlyphLens.Windows.Ocr;
 using GlyphLens.Windows.Worker;
 
 namespace GlyphLens.App;
@@ -20,6 +21,7 @@ public partial class App : Application, IDisposable
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(10);
 
     private WindowsGraphicsCaptureService? _captureService;
+    private WindowsOcrEngine? _ocrEngine;
     private PythonWorkerProcessLauncher? _workerLauncher;
     private WorkerProcessManager? _workerManager;
     private MainViewModel? _mainViewModel;
@@ -34,6 +36,7 @@ public partial class App : Application, IDisposable
 
         _disposed = true;
         _mainViewModel?.Dispose();
+        _ocrEngine?.Dispose();
 
         // Bounded, so a stuck driver call or worker can never keep the application from exiting.
         var shutdown = Task.WhenAll(
@@ -53,11 +56,14 @@ public partial class App : Application, IDisposable
         _captureService = new WindowsGraphicsCaptureService();
         var captureViewModel = new CaptureViewModel(_captureService, new CaptureTargetProvider());
 
+        _ocrEngine = new WindowsOcrEngine();
+        var ocrViewModel = new OcrViewModel(_ocrEngine, _ocrEngine, _captureService, captureViewModel.Overlay, text => Clipboard.SetText(text));
+
         _workerLauncher = new PythonWorkerProcessLauncher();
         _workerManager = new WorkerProcessManager(new NamedPipeWorkerListenerFactory(), _workerLauncher, log: new TraceWorkerLog());
         var workerViewModel = new WorkerViewModel(_workerManager);
 
-        _mainViewModel = new MainViewModel(captureViewModel, workerViewModel);
+        _mainViewModel = new MainViewModel(captureViewModel, ocrViewModel, workerViewModel);
 
         var mainWindow = new MainWindow
         {

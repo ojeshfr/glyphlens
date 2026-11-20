@@ -1,0 +1,58 @@
+<UserControl x:Class="GlyphLens.App.Views.OcrView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:OcrViewModel}"
+             d:DesignWidth="364">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+
+    <StackPanel>
+        <Grid Margin="0,0,0,12">
+            <TextBlock Text="Text recognition" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="Windows OCR · offline" Style="{StaticResource MutedText}" FontSize="11"
+                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+
+        <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" DisplayMemberPath="Label"
+                  HorizontalAlignment="Stretch" Margin="0,0,0,10"
+                  AutomationProperties.AutomationId="OcrLanguageSelector" AutomationProperties.Name="Recognition language" />
+
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" Content="Read text" Command="{Binding ReadTextCommand}" Style="{StaticResource PrimaryButton}"
+                    HorizontalAlignment="Stretch" Padding="0,6" Margin="0,0,8,0"
+                    AutomationProperties.AutomationId="ReadTextButton" />
+            <ToggleButton Grid.Column="1" Content="Live" IsChecked="{Binding IsLive}" IsEnabled="{Binding IsCapturing}" Padding="16,6" Margin="0,0,8,0"
+                          AutomationProperties.AutomationId="LiveOcrToggle" AutomationProperties.Name="Live reading" />
+            <Button Grid.Column="2" Content="Copy" Command="{Binding CopyTextCommand}" Padding="14,6"
+                    AutomationProperties.AutomationId="CopyTextButton" />
+        </Grid>
+
+        <TextBlock Text="{Binding StatusText}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                   AutomationProperties.AutomationId="OcrStatusText" />
+
+        <ListBox ItemsSource="{Binding Lines}" MaxHeight="180" MinHeight="60" AutomationProperties.AutomationId="OcrLinesList">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="0,2" AutomationProperties.Name="{Binding Text}">
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding BoundsText}" Style="{StaticResource MutedText}" FontSize="10" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Border Style="{StaticResource ErrorBanner}" Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" Margin="0,10,0,0">
+            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" AutomationProperties.AutomationId="OcrErrorText" />
+        </Border>
+    </StackPanel>
+</UserControl>

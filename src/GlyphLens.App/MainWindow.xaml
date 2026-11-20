@@ -50,6 +50,10 @@
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <Border Style="{StaticResource Card}">
+                        <views:OcrView DataContext="{Binding Ocr}" />
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                         <views:WorkerView DataContext="{Binding Worker}" />
                     </Border>
 
