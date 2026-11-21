@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+             xmlns:local="clr-namespace:GlyphLens.App.Views"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:ReadinessViewModel}"
              d:DesignWidth="560">
@@ -67,6 +68,10 @@
             <TextBlock Text="{Binding SummaryDetail}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
                        AutomationProperties.AutomationId="ReadinessSummaryDetail" />
         </StackPanel>
+
+        <!-- "Install everything": only when something is missing, and only after the user confirmed what will be downloaded -->
+        <local:SetupPanel DataContext="{Binding Setup}" Margin="0,0,0,10"
+                          Visibility="{Binding DataContext.HasSetup, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
 
         <ItemsControl ItemsSource="{Binding Items}" Focusable="False" AlternationCount="1000"
                       AutomationProperties.AutomationId="ReadinessList" AutomationProperties.Name="Readiness checks">

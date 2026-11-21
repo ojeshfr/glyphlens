@@ -25,11 +25,7 @@ const THEME_OPTIONS: { value: ThemeChoice; label: string; Icon: typeof Sun }[] =
 ];
 
 export function Logo({ className }: { className?: string }) {
-  return (
-    <span className={cn("inline-flex size-7 items-center justify-center rounded-[0.45rem] bg-primary text-[0.95rem] font-bold text-primary-foreground", className)} aria-hidden="true">
-      G
-    </span>
-  );
+  return <img src="./icon.svg" alt="" width={28} height={28} className={cn("size-7 shrink-0", className)} aria-hidden="true" />;
 }
 
 /** System / Light / Dark. `compact` shows icons only (with tooltips and accessible names). */

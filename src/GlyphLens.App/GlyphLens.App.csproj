@@ -12,6 +12,8 @@
     <RootNamespace>GlyphLens.App</RootNamespace>
     <AssemblyName>GlyphLens</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The brand mark (blue rounded square, white G), drawn by tools/make-icon.py: the exe's icon and the main window's icon. -->
+    <ApplicationIcon>Assets\GlyphLens.ico</ApplicationIcon>
     <!-- WPF0001: Application.ThemeMode (Fluent dark theme) is an experimental WPF API in .NET 10. -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
   </PropertyGroup>
@@ -25,6 +27,7 @@
   <ItemGroup>
     <!-- Where the update feed is and the public key that verifies it (empty = updates not set up: nothing is ever checked). -->
     <EmbeddedResource Include="Updates\update-config.json" LogicalName="GlyphLens.UpdateConfig.json" />
+    <Resource Include="Assets\GlyphLens.ico" />
   </ItemGroup>
 
 </Project>

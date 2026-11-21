@@ -6,15 +6,18 @@ using GlyphLens.App.Services;
 using GlyphLens.App.ViewModels;
 using GlyphLens.Core.Abstractions;
 using GlyphLens.Core.Ocr;
+using GlyphLens.Core.Setup;
 using GlyphLens.Core.Translation;
 using GlyphLens.Infrastructure.IPC;
 using GlyphLens.Infrastructure.Ocr;
+using GlyphLens.Infrastructure.Setup;
 using GlyphLens.Infrastructure.Translation;
 using GlyphLens.Infrastructure.Updates;
 using GlyphLens.Windows.Capture;
 using GlyphLens.Windows.Display;
 using GlyphLens.Windows.Ocr;
 using GlyphLens.Windows.Platform;
+using GlyphLens.Windows.Setup;
 using GlyphLens.Windows.Worker;
 
 namespace GlyphLens.App;
@@ -27,7 +30,8 @@ namespace GlyphLens.App;
 /// worker is shut down when the application exits, so neither can outlive the app. The worker is never started
 /// at launch: the user starts it from the diagnostics panel, or by turning translation on. Translation runs entirely
 /// through that local worker. The only network requests are the updater's (<see cref="UpdateService"/>): the signed update feed and,
-/// when the user asks, an installer; never any screen content.
+/// when the user asks, an installer; and the one-click setup's downloads (<see cref="EnvironmentInstaller"/>), which run only after the
+/// user pressed "Install everything" and confirmed. Never any screen content.
 /// </remarks>
 public partial class App : Application, IDisposable
 {
@@ -49,6 +53,7 @@ public partial class App : Application, IDisposable
     private ThemeService? _themeService;
     private HttpUpdateClient? _updateClient;
     private UpdateService? _updateService;
+    private HttpFileDownloader? _setupDownloader;
     private bool _disposed;
 
     public void Dispose()
@@ -61,6 +66,7 @@ public partial class App : Application, IDisposable
         _disposed = true;
         _updateService?.Dispose();
         _updateClient?.Dispose();
+        _setupDownloader?.Dispose();
         _themeService?.Dispose();
         _systemTheme?.Dispose();
         _hotkeys?.Dispose();
@@ -137,10 +143,12 @@ public partial class App : Application, IDisposable
 
         var overlayViewModel = new OverlayViewModel(translationViewModel, text => Clipboard.SetText(text), ocrViewModel);
         // The first-run checklist; its offline check reads which connections GlyphLens' own processes have (Windows TCP/UDP tables).
-        var readiness = new ReadinessViewModel(translationViewModel, ocrViewModel, captureViewModel, _workerManager, new WindowsConnectionProbe(), SynchronizationContext.Current);
-        // The updater: the app's only network use (see UpdateService and the privacy text); nothing happens when the build has no
-        // update feed or signing key (Updates/update-config.json).
+        // "Install everything": offered by the checklist when something is missing; it downloads only after the user confirmed.
         var currentVersion = typeof(App).Assembly.GetName().Version ?? new Version(0, 0, 0);
+        var setup = new SetupViewModel(CreateInstaller(catalog, currentVersion), SynchronizationContext.Current, ShowFileInExplorer);
+        var readiness = new ReadinessViewModel(translationViewModel, ocrViewModel, captureViewModel, _workerManager, new WindowsConnectionProbe(), SynchronizationContext.Current, setup: setup);
+        // The updater (see UpdateService and the privacy text); nothing happens when the build has no update feed or signing key
+        // (Updates/update-config.json).
         _updateClient = new HttpUpdateClient(currentVersion.ToString(3));
         _updateService = new UpdateService(UpdateConfiguration.LoadEmbedded(), _updateClient, preferences, currentVersion);
         var updates = new UpdatesViewModel(_updateService, RunInstallerAndExit, SynchronizationContext.Current);
@@ -155,6 +163,7 @@ public partial class App : Application, IDisposable
         RegisterHotkeys(overlayViewModel);
 
         ShowMainWindow();
+        CreateDesktopShortcutOnce(preferences);
         overlayViewModel.SettingsRequested += (_, _) => ShowMainWindow();
         overlayViewModel.PropertyChanged += (_, args) =>
         {
@@ -165,6 +174,70 @@ public partial class App : Application, IDisposable
         };
 
         await captureViewModel.InitializeAsync();
+    }
+
+    /// <summary>Composes the one-click setup: pinned downloads, uv and Python checks in kill-on-close jobs, the worker's own model importer.</summary>
+    private EnvironmentInstaller CreateInstaller(IModelCatalog catalog, Version version)
+    {
+        var runtime = RuntimeDirectory.Resolve(Environment.GetEnvironmentVariable);
+        ISetupLog log = runtime.Root is { } root ? new SetupLogFile(RuntimeDirectory.LogFile(root)) : NullSetupLog.Instance;
+        _setupDownloader = new HttpFileDownloader(version.ToString(3));
+        var launcher = _workerLauncher!;
+        var services = new EnvironmentInstallerServices(
+            runtime,
+            ModelsDirectory.Resolve(Environment.GetEnvironmentVariable),
+            _setupDownloader,
+            new JobProcessRunner(),
+            catalog,
+            _workerManager!,
+            new WorkerEnvironmentSwitch(_workerManager!, () => launcher.InterpreterPath, launcher.ForgetInterpreter),
+            log,
+            EngineLock.LoadEmbedded());
+        return new EnvironmentInstaller(services);
+    }
+
+    /// <summary>Opens Explorer with <paramref name="path"/> selected (the setup log).</summary>
+    private static void ShowFileInExplorer(string path)
+    {
+        try
+        {
+            string arguments = File.Exists(path) ? $"/select,\"{path}\"" : $"\"{Path.GetDirectoryName(path)}\"";
+            _ = Process.Start(new ProcessStartInfo("explorer.exe", arguments) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        {
+            Debug.WriteLine($"Explorer could not be opened ({ex.GetType().Name}).");
+        }
+    }
+
+    /// <summary>
+    /// The first time GlyphLens runs, puts a shortcut on the desktop (once: a shortcut the user deleted is not created again). Off the UI
+    /// thread; a failure is never shown and never blocks anything. Only for the real GlyphLens.exe (not when started through dotnet.exe).
+    /// </summary>
+    private static void CreateDesktopShortcutOnce(AppPreferencesStore preferences)
+    {
+        string? executable = Environment.ProcessPath;
+        if (executable is null || !string.Equals(Path.GetFileName(executable), "GlyphLens.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var service = new DesktopShortcutService(
+            preferences,
+            new ShellLinkShortcutFiles(),
+            () => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            executable);
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                Debug.WriteLine($"Desktop shortcut: {service.EnsureOnce()}.");
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                Debug.WriteLine($"Desktop shortcut failed ({ex.GetType().Name}).");
+            }
+        });
     }
 
     /// <summary>Runs the verified installer the user chose to install, then closes GlyphLens so the installer can replace it.</summary>

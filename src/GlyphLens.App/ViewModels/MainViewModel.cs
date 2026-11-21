@@ -152,18 +152,20 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public string FeatureStatus { get; } =
         "GlyphLens captures a display or window, reads its text (Windows OCR, or the local Chinese OCR through the Python worker), "
         + "identifies the language and translates it to English with a local Argos model, shown in a floating overlay. Nothing is "
-        + "uploaded, models are never downloaded automatically, and frames and recognised text stay in memory. Without an installed "
+        + "uploaded, models are never downloaded automatically (only when you click Install everything), and frames and recognised text stay in memory. Without an installed "
         + "model the app says so instead of guessing a translation. Text extraction through accessibility APIs and a history of "
         + "translations are not implemented.";
 
     public string PrivacyText { get; } =
-        "Screen content never leaves this computer: GlyphLens sends no screenshots, recognised text or translations anywhere. Its only "
-        + "network requests are update checks: when \"Check for updates automatically\" is on (the default), it asks the GlyphLens update "
-        + "server about once a day whether a new version exists, sending nothing but that request; an update is downloaded only when you "
-        + "choose to. The translation and OCR run in a local worker process that is forbidden to open network connections, and the "
-        + "Overview checks the connections of GlyphLens' own processes on request. Screenshots and recognised text are never written to "
-        + "disk or logged; GlyphLens remembers only the overlay's position, size, opacity, text size and pin setting, the appearance, "
-        + "and the update settings.";
+        "Screen content never leaves this computer: GlyphLens sends no screenshots, recognised text or translations anywhere. It uses "
+        + "the network only for two things. Update checks: when \"Check for updates automatically\" is on (the default), it asks the "
+        + "GlyphLens update server about once a day whether a new version exists, sending nothing but that request; an update is "
+        + "downloaded only when you choose to. Install everything: only when you click it on the Overview page and confirm, it downloads "
+        + "Python, the OCR and translation packages and the models from their publishers, each checked against a pinned hash. After "
+        + "that, translation works offline. The translation and OCR run in a local worker process that is forbidden to open network "
+        + "connections, and the Overview checks the connections of GlyphLens' own processes on request. Screenshots and recognised text "
+        + "are never written to disk or logged; GlyphLens remembers only the overlay's position, size, opacity, text size and pin "
+        + "setting, the appearance, the update settings and whether it created the desktop shortcut.";
 
     public string VersionInfo { get; }
 

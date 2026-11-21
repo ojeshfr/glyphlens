@@ -16,7 +16,8 @@ public enum AppTheme
 }
 
 /// <summary>
-/// The application-wide preferences remembered between sessions: the appearance and the update settings. Never any screen text,
+/// The application-wide preferences remembered between sessions: the appearance, the update settings and whether the desktop shortcut
+/// was created once. Never any screen text,
 /// translation or capture (the overlay's layout is kept separately, see <see cref="Overlay.OverlaySettingsStore"/>).
 /// </summary>
 public sealed record AppPreferences
@@ -33,6 +34,11 @@ public sealed record AppPreferences
 
     /// <summary>When the update server was last asked successfully (UTC), or <see langword="null"/> if never.</summary>
     public DateTimeOffset? LastUpdateCheck { get; init; }
+
+    /// <summary>
+    /// Whether the desktop shortcut was created (or found) once. Set once, so a shortcut the user deleted is never created again.
+    /// </summary>
+    public bool DesktopShortcutHandled { get; init; }
 }
 
 /// <summary>Reads and writes <see cref="AppPreferences"/> as a small JSON file in the user's local application data.</summary>

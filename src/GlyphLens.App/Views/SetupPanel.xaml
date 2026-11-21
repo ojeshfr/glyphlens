@@ -1,0 +1,252 @@
+<UserControl x:Class="GlyphLens.App.Views.SetupPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:SetupViewModel}"
+             d:DesignWidth="560">
+    <!--
+        The one-click setup ("Install everything") inside the readiness section. Five states, one visible at a time: the offer, the
+        consent panel (what is downloaded, from where, how much, the folders and licences; nothing starts before "Download and install"),
+        the running steps with a progress bar and Cancel, a failure with the failing step, Try again and the log, and the success note.
+    -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- A step's state as a small badge with a symbol, so it is never shown by colour alone (the state is also written out). -->
+        <Style x:Key="StepBadge" TargetType="Border">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Running">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Done">
+                    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource SuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Skipped">
+                    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource SuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Failed">
+                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource ErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="StepGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource OnStatusBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Text" Value="" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Running">
+                    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                    <Setter Property="Text" Value="&#xE768;" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Done">
+                    <Setter Property="Text" Value="&#xE73E;" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Skipped">
+                    <Setter Property="Text" Value="&#xE73E;" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Failed">
+                    <Setter Property="Text" Value="&#xE711;" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="StepTitle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Running">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Done">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Skipped">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Failed">
+                    <Setter Property="Foreground" Value="{DynamicResource ErrorTextBrush}" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="StepTemplate" DataType="{x:Type vm:SetupStepItem}">
+            <Grid Margin="0,3" AutomationProperties.Name="{Binding AutomationName}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource StepBadge}" Margin="0,0,10,0" VerticalAlignment="Top">
+                    <TextBlock Style="{StaticResource StepGlyph}" />
+                </Border>
+                <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource StepTitle}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding StateText}" Style="{StaticResource MutedText}" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <StackPanel Visibility="{Binding IsVisible, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+
+        <!-- 1. The offer -->
+        <Border Style="{StaticResource InfoBanner}" Padding="14,12" Visibility="{Binding IsOffer, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"
+                AutomationProperties.AutomationId="SetupOffer">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,14,0" VerticalAlignment="Center">
+                    <TextBlock Text="Set up Chinese translation" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
+                               Text="GlyphLens can download and install what is missing: Python, the OCR and translation packages, and the Chinese models. Nothing is downloaded until you confirm." />
+                    <TextBlock Text="{Binding Notice}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" AutomationProperties.AutomationId="SetupNotice" />
+                </StackPanel>
+                <Button Grid.Column="1" Content="Install everything" Style="{StaticResource PrimaryButton}" Command="{Binding ShowConsentCommand}" VerticalAlignment="Center"
+                        AutomationProperties.AutomationId="SetupInstallEverythingButton"
+                        AutomationProperties.Name="Install everything: download and install what Chinese translation needs" />
+            </Grid>
+        </Border>
+
+        <!-- 2. Consent: what will be downloaded, from where, how much, where it goes -->
+        <Border Background="{DynamicResource SurfaceSecondaryBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                CornerRadius="{StaticResource ControlCornerRadius}" Padding="16,14"
+                Visibility="{Binding IsConsent, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" AutomationProperties.AutomationId="SetupConsent">
+            <StackPanel>
+                <TextBlock Text="Install everything" Style="{StaticResource SectionTitle}" HorizontalAlignment="Left" />
+                <TextBlock Text="GlyphLens will download these files and install them for you:" TextWrapping="Wrap" Margin="0,6,0,6" />
+                <ItemsControl ItemsSource="{Binding Downloads}" Focusable="False" AutomationProperties.AutomationId="SetupDownloadList"
+                              AutomationProperties.Name="Files that will be downloaded">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:SetupDownloadItem}">
+                            <Grid Margin="0,3" AutomationProperties.Name="{Binding AutomationName}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="14" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="•" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding What}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Details}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <CheckBox Content="{Binding TraditionalLabel}" IsChecked="{Binding IncludeTraditional}" Margin="0,8,0,0"
+                          AutomationProperties.AutomationId="SetupIncludeTraditional" AutomationProperties.Name="{Binding TraditionalLabel}" />
+                <TextBlock Text="{Binding TotalText}" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.AutomationId="SetupTotal" />
+                <TextBlock Text="{Binding ConsentNote}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                <TextBlock Text="{Binding FoldersText}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"
+                           AutomationProperties.AutomationId="SetupFolders" />
+                <TextBlock Text="{Binding LicenceNote}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                <Border Style="{StaticResource ErrorBanner}" Margin="0,10,0,0" Visibility="{Binding HasPlanProblem, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding PlanProblem}" TextWrapping="Wrap" AutomationProperties.AutomationId="SetupPlanProblem" />
+                </Border>
+
+                <WrapPanel Margin="0,12,0,0">
+                    <Button Content="Download and install" Style="{StaticResource PrimaryButton}" Command="{Binding StartCommand}" Margin="0,0,8,0"
+                            AutomationProperties.AutomationId="SetupStartButton" AutomationProperties.Name="Download and install" />
+                    <Button Content="Cancel" Command="{Binding CancelConsentCommand}"
+                            AutomationProperties.AutomationId="SetupConsentCancelButton" AutomationProperties.Name="Cancel the setup" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- 3-5. Running, failed, succeeded: the step list with the state of each step -->
+        <Border Background="{DynamicResource SurfaceSecondaryBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="1"
+                CornerRadius="{StaticResource ControlCornerRadius}" Padding="16,14"
+                Visibility="{Binding ShowsSteps, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" AutomationProperties.AutomationId="SetupProgressPanel">
+            <StackPanel>
+                <TextBlock HorizontalAlignment="Left" Margin="0,0,0,8" AutomationProperties.AutomationId="SetupStatusTitle">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
+                            <Setter Property="Text" Value="Installing…" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding State}" Value="Failed">
+                                    <Setter Property="Text" Value="The setup did not finish" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding State}" Value="Succeeded">
+                                    <Setter Property="Text" Value="Setup complete" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <ItemsControl ItemsSource="{Binding Steps}" ItemTemplate="{StaticResource StepTemplate}" Focusable="False"
+                              AutomationProperties.AutomationId="SetupStepList" AutomationProperties.Name="Setup steps" />
+
+                <!-- running: what happens now, the download progress, Cancel -->
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" AutomationProperties.AutomationId="SetupMessage" />
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressPercent, Mode=OneWay}" IsIndeterminate="{Binding IsProgressIndeterminate}"
+                                     Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource ControlFillBrush}" BorderThickness="0" VerticalAlignment="Center"
+                                     AutomationProperties.AutomationId="SetupProgressBar" AutomationProperties.Name="Download progress" />
+                        <TextBlock Grid.Column="1" Text="{Binding ProgressText}" Style="{StaticResource MutedText}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="SetupProgressText" />
+                    </Grid>
+                    <Button Content="Cancel" Command="{Binding CancelCommand}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                            AutomationProperties.AutomationId="SetupCancelButton" AutomationProperties.Name="Cancel the installation" />
+                </StackPanel>
+
+                <!-- failed: which step, why, Try again, the log -->
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsFailed, Converter={StaticResource BoolToVisibility}}">
+                    <Border Style="{StaticResource ErrorBanner}">
+                        <StackPanel>
+                            <TextBlock TextWrapping="Wrap" FontWeight="SemiBold" AutomationProperties.AutomationId="SetupFailedStep">
+                                <Run Text="Failed:" />
+                                <Run Text="{Binding FailedStep, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Margin="0,2,0,0" AutomationProperties.AutomationId="SetupErrorMessage" />
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="Try again continues where it stopped; finished steps are not repeated. The technical log (installer output only, never screen content) is here:"
+                               Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,4" />
+                    <TextBox Text="{Binding LogPath, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" FontSize="12"
+                             AutomationProperties.AutomationId="SetupLogPath" AutomationProperties.Name="Setup log file path" />
+                    <WrapPanel Margin="0,10,0,0">
+                        <Button Content="Try again" Style="{StaticResource PrimaryButton}" Command="{Binding RetryCommand}" Margin="0,0,8,8"
+                                AutomationProperties.AutomationId="SetupRetryButton" AutomationProperties.Name="Try the setup again" />
+                        <Button Content="Show log" Command="{Binding ShowLogCommand}" Margin="0,0,8,8"
+                                AutomationProperties.AutomationId="SetupShowLogButton" AutomationProperties.Name="Show the setup log file" />
+                        <Button Content="Close" Command="{Binding CloseCommand}" Margin="0,0,8,8"
+                                AutomationProperties.AutomationId="SetupCloseFailedButton" AutomationProperties.Name="Close the setup panel" />
+                    </WrapPanel>
+                </StackPanel>
+
+                <!-- succeeded -->
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsSucceeded, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" AutomationProperties.AutomationId="SetupResult" />
+                    <Button Content="Close" Command="{Binding CloseCommand}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                            AutomationProperties.AutomationId="SetupCloseButton" AutomationProperties.Name="Close the setup panel" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

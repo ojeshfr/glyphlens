@@ -8,6 +8,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="{Binding ProductName}"
+        Icon="/Assets/GlyphLens.ico"
         Width="1000"
         Height="700"
         MinWidth="820"
@@ -196,7 +197,7 @@
                                 <TextBlock Text="local files only" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                             </Grid>
                             <TextBlock TextWrapping="Wrap" Style="{StaticResource MutedText}" FontSize="12" Margin="0,0,0,10"
-                                       Text="The local Chinese OCR (PP-OCRv5, official ONNX exports) reads Simplified and Traditional Chinese, English and Japanese. Put the PP-OCRv5_mobile_det_onnx and PP-OCRv5_mobile_rec_onnx folders in the OCR models folder; GlyphLens never downloads them. The Overview shows whether the worker found them." />
+                                       Text="The local Chinese OCR (PP-OCRv5, official ONNX exports) reads Simplified and Traditional Chinese, English and Japanese. Install everything on the Overview page downloads them (only when you click it), or put the PP-OCRv5_mobile_det_onnx and PP-OCRv5_mobile_rec_onnx folders in the OCR models folder yourself. The Overview shows whether the worker found them." />
                             <Button Content="Open OCR folder" Command="{Binding OpenOcrFolderCommand}" HorizontalAlignment="Left"
                                     AutomationProperties.AutomationId="ModelsOpenOcrFolderButton" />
                         </StackPanel>

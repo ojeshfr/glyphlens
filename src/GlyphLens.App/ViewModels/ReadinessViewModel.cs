@@ -32,7 +32,8 @@ public sealed record ReadinessItem(string Id, string Title, string Detail, Statu
 /// Every row is derived from something that was measured or reported: the worker's lifecycle and its health report, the models
 /// the worker lists, the capture status, and a check of the network connections owned by GlyphLens' own processes. A row says
 /// "not checked yet" rather than guessing when the worker has not been asked. Actions are real (start the worker, open the OCR
-/// models folder, import a model file); nothing is downloaded, installed or changed on the system.
+/// models folder, import a model file). When something needed for Chinese translation is missing, the checklist offers the one-click
+/// setup (<see cref="SetupViewModel"/>), which downloads only after the user confirmed; the checklist itself downloads nothing.
 /// </para>
 /// </remarks>
 public sealed class ReadinessViewModel : ViewModelBase, IDisposable
@@ -52,6 +53,7 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
     private StatusLevel _summaryLevel = StatusLevel.Neutral;
     private int _probing;
     private bool _disposed;
+    private bool _needsSetup;
 
     public ReadinessViewModel(
         TranslationViewModel translation,
@@ -60,7 +62,8 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         IWorkerProcessManager worker,
         IProcessConnectionProbe? probe,
         SynchronizationContext? uiContext,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        SetupViewModel? setup = null)
     {
         ArgumentNullException.ThrowIfNull(translation);
         ArgumentNullException.ThrowIfNull(ocr);
@@ -74,6 +77,7 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         _probe = probe;
         _ui = uiContext;
         _time = timeProvider ?? TimeProvider.System;
+        Setup = setup;
 
         Items = new ReadOnlyObservableCollection<ReadinessItem>(_items);
         RecheckCommand = new AsyncRelayCommand(RecheckAsync, () => _probe is not null, uiContext);
@@ -82,8 +86,28 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         _ocr.PropertyChanged += OnSourcePropertyChanged;
         _capture.PropertyChanged += OnSourcePropertyChanged;
         _worker.StatusChanged += OnWorkerStatusChanged;
+        if (Setup is not null)
+        {
+            Setup.Completed += OnSetupCompleted;
+        }
 
         Refresh();
+    }
+
+    /// <summary>The "Install everything" panel, or <see langword="null"/> when not composed (tests).</summary>
+    public SetupViewModel? Setup { get; }
+
+    public bool HasSetup => Setup is not null;
+
+    /// <summary>
+    /// Whether something needed for Chinese translation is missing and the one-click setup can provide it: no usable Python, the OCR
+    /// packages or model files, the translation runtime, or the Simplified Chinese model. The optional Traditional model does not count.
+    /// Nothing is claimed before the worker has reported.
+    /// </summary>
+    public bool NeedsSetup
+    {
+        get => _needsSetup;
+        private set => SetProperty(ref _needsSetup, value);
     }
 
     /// <summary>The checklist, in the order shown.</summary>
@@ -124,6 +148,10 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         _ocr.PropertyChanged -= OnSourcePropertyChanged;
         _capture.PropertyChanged -= OnSourcePropertyChanged;
         _worker.StatusChanged -= OnWorkerStatusChanged;
+        if (Setup is not null)
+        {
+            Setup.Completed -= OnSetupCompleted;
+        }
     }
 
     /// <summary>Rebuilds the rows from the current state (cheap; no process is probed).</summary>
@@ -153,6 +181,26 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         }
 
         Summarise(rows);
+        NeedsSetup = ComputeNeedsSetup();
+        Setup?.SetNeeded(NeedsSetup);
+    }
+
+    private bool ComputeNeedsSetup()
+    {
+        var status = _worker.Status;
+        if (status == WorkerStatus.Unavailable)
+        {
+            return true; // no usable Python was found, or the worker could not be started with it
+        }
+
+        if (status != WorkerStatus.Ready || _worker.LastHealth is not { } health)
+        {
+            return false; // not checked yet
+        }
+
+        return LocalOcrAdvisor.Classify(health) is LocalOcrState.ModelsMissing or LocalOcrState.RuntimeMissing
+            || health.Translation == WorkerComponentState.Unavailable
+            || (_translation.IsCatalogLoaded && !_translation.InstalledSources.Contains("zh", StringComparer.OrdinalIgnoreCase));
     }
 
     // ---- rows --------------------------------------------------------------------------------------------------------
@@ -226,7 +274,7 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         return new ReadinessItem(
             id,
             title,
-            "Not installed. Import the .argosmodel file you downloaded.",
+            "Not installed. Use Install everything above, or import an .argosmodel file you downloaded.",
             optional ? StatusLevel.Neutral : StatusLevel.Attention,
             _translation.CanImportModel ? "Import model…" : null,
             _translation.CanImportModel ? _translation.ImportModelCommand : null);
@@ -367,6 +415,21 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
             or nameof(CaptureViewModel.Status) or nameof(CaptureViewModel.TargetInfoText) or nameof(CaptureViewModel.ErrorMessage))
         {
             Refresh();
+        }
+    }
+
+    /// <summary>After the setup: read the installed models again and repeat the checks, so every row shows the new state.</summary>
+    private async void OnSetupCompleted(object? sender, EventArgs e)
+    {
+        try
+        {
+            await _translation.RefreshModelsCommand.ExecuteAsync().ConfigureAwait(true);
+            Refresh();
+            await RecheckCommand.ExecuteAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Debug.WriteLine($"Re-checking after the setup failed ({ex.GetType().Name}).");
         }
     }
 
