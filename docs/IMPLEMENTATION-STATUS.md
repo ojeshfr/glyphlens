@@ -321,6 +321,20 @@ Newest last. Each entry: task, files, tests executed, result, what remains.
   The release script now builds a self-contained zip (about 67 MB; starts without the machine's .NET runtime: checked on a copy of the previous
   commit) and ships the .NET licence texts in `licenses/dotnet/`.
 
+### 12. Release `v0.1.1-preview` and the new website (2026-11-21) - PUBLISHED
+- Pushed to `main` (CI green on `e03bdde`): `c7784f6` (docs, ADR-0008, the new-PC offer, logo icon, self-contained release script), `79f6ff2` (Readiness rows
+  get an accessible name: UI Automation showed the record's `ToString()` before, 0 such names after) and `e03bdde` (website). Five earlier commits (`a37d499`..`b448428`)
+  came from another Claude session of the owner; they hold most of the Install everything code and the `design/` folder.
+- GitHub pre-release `v0.1.1-preview` (tag on `79f6ff2`): `GlyphLens-0.1.1-preview-win-x64.zip`, 70,478,111 bytes, SHA-256
+  `e7a9c1b3e8bf8a0e09b6a60b7fdcf87d391b8fd3724f7999cf5ea8b77ccd9e68`, self-contained (carries its .NET runtime; `licenses/dotnet/` holds its licence texts) plus the `.sha256` file.
+  **PASS:** entries inspected (455, forward slashes, no `.pdb`/`.xml`); the extracted zip started with the earlier real install's folders (`GLYPHLENS_RUNTIME_DIR`,
+  `GLYPHLENS_MODELS_DIR`) and, read through UI Automation, ran the worker on the managed Python 3.12.16 and reported PP-OCRv5 ready and the Simplified model installed;
+  the zip downloaded back from the release has the same SHA-256.
+- Website live at https://ojeshfr.github.io/glyphlens/ (`gh-pages` `f364d8e`): Download section shows the real file, size and SHA-256; Privacy, FAQ and Download text describe Install everything.
+  **PASS on the live URL:** own origin only, no policy violation, no console error, all 5 images load, no horizontal overflow at 1100 px, real links, no stale text.
+- **NOT TESTED:** a clean PC, Windows 10, a proxy or slow network, SmartScreen, the desktop shortcut on a real first run (temporary folders only), the full capture to translation flow on this zip
+  (verified earlier on the repository build), other browsers and a real phone for the site.
+
 ### Open items at the end of this session
 - Rerun `drive-keyboard-e2e.ps1` and the other E2E scripts on the current (restyled) build, and look at the running app on screen.
 - Other DPI scales, real screen readers, multi-monitor, Windows 10: NOT TESTED.
