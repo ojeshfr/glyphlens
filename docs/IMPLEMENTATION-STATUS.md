@@ -335,6 +335,16 @@ Newest last. Each entry: task, files, tests executed, result, what remains.
 - **NOT TESTED:** a clean PC, Windows 10, a proxy or slow network, SmartScreen, the desktop shortcut on a real first run (temporary folders only), the full capture to translation flow on this zip
   (verified earlier on the repository build), other browsers and a real phone for the site.
 
+### 13. Release `v0.1.2-preview` (2026-11-21) - PUBLISHED
+- The same as 0.1.1 plus the owner's logo in the header of the floating panel (0.1.1 still had the old "G" badge there; the application icon and the sidebar already had the logo).
+  Tag on `4a3656d`; `GlyphLens-0.1.2-preview-win-x64.zip`, 70,478,132 bytes, SHA-256 `e36c8a9177d451efa0b6814ce43bf3e373a16fe5e1884f9681f46d04b059552d`, self-contained, with its `.sha256`.
+- **PASS:** format check; .NET tests Core 514, Infrastructure 576, App 385 (+1 skipped), Windows 165 (+10 skipped); zip entries inspected (455, forward slashes, no `.pdb`/`.xml`);
+  the extracted zip started and, read through UI Automation, ran the worker on the managed Python 3.12.16 with PP-OCRv5 ready and the Simplified model installed; its embedded exe icon is byte-identical
+  to the one in 0.1.1 (the new logo); the panel header logo was seen in the running repository build of the same source (screenshot, then deleted: it also showed the owner's screen).
+  The worker is unchanged since 0.1.1 (its tests were not re-run for this build).
+- **NOT TESTED** (as before): a clean PC, Windows 10, a proxy or slow network, SmartScreen, the desktop shortcut on a real first run, the full capture to translation flow on this zip.
+- The website's Download section and the live page point at this release; `v0.1.1-preview` stays published (its asset is not replaced, so its checksum stays valid).
+
 ### Open items at the end of this session
 - Rerun `drive-keyboard-e2e.ps1` and the other E2E scripts on the current (restyled) build, and look at the running app on screen.
 - Other DPI scales, real screen readers, multi-monitor, Windows 10: NOT TESTED.
