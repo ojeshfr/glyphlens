@@ -64,7 +64,7 @@ public sealed class ReadinessViewModelTests
         public ReadinessItem Row(string id) => Vm.Items.Single(i => i.Id == id);
     }
 
-    private static Rig Create(bool zh = true, bool zt = false, bool withProbe = true)
+    private static Rig Create(bool zh = true, bool zt = false, bool withProbe = true, SetupViewModel? setup = null)
     {
         var engine = new FakeOcr { AvailableLanguages = [new("en-US", "English (United States)"), new(LocalTag, "Chinese + English (local OCR worker)")] };
         var captureService = new FakeCaptureService();
@@ -87,7 +87,7 @@ public sealed class ReadinessViewModelTests
         var translation = new TranslationViewModel(pipeline, catalog, worker, ocr, new FakeModelFilePicker(), _ => { }, uiContext: null);
         var probe = new FakeProbe();
         var ui = new QueueContext();
-        var vm = new ReadinessViewModel(translation, ocr, capture, worker, withProbe ? probe : null, ui);
+        var vm = new ReadinessViewModel(translation, ocr, capture, worker, withProbe ? probe : null, ui, setup: setup);
         return new Rig(vm, translation, ocr, capture, worker, catalog, captureService, probe, ui);
     }
 
@@ -328,5 +328,117 @@ public sealed class ReadinessViewModelTests
         rig.Translation.Dispose();
         rig.Ocr.Dispose();
         rig.Capture.Dispose();
+    }
+
+    // ---- the "Install everything" offer ------------------------------------------------------------------------------
+
+    private static SetupViewModel NewSetup() => new(new SetupViewModelTests.FakeSetup(), uiContext: null);
+
+    [Fact]
+    public void BeforeTheWorkerHasReported_SetupIsNotOffered()
+    {
+        var setup = NewSetup();
+        using var rig = Create(setup: setup);
+
+        Assert.False(rig.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Hidden, setup.State);
+        Assert.True(rig.Vm.HasSetup);
+    }
+
+    [Theory]
+    [InlineData(WorkerComponentState.NotInstalled)]
+    [InlineData(WorkerComponentState.Unavailable)]
+    public async Task MissingOcrPartsOrRuntime_OfferTheSetup(WorkerComponentState ocr)
+    {
+        var setup = NewSetup();
+        using var rig = Create(setup: setup);
+
+        await StartAsync(rig, ocr);
+
+        Assert.True(rig.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Offer, setup.State);
+    }
+
+    [Fact]
+    public async Task AMissingSimplifiedModel_OffersTheSetup_ButAMissingTraditionalOneDoesNot()
+    {
+        var setup = NewSetup();
+        using var rig = Create(zh: false, zt: false, setup: setup);
+        await StartAsync(rig);
+        Assert.True(rig.Vm.NeedsSetup);
+
+        var setup2 = NewSetup();
+        using var rig2 = Create(zh: true, zt: false, setup: setup2);
+        await StartAsync(rig2);
+        Assert.False(rig2.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Hidden, setup2.State);
+    }
+
+    [Fact]
+    public void NoUsablePython_OffersTheSetup()
+    {
+        var setup = NewSetup();
+        using var rig = Create(setup: setup);
+
+        rig.Worker.BecomeUnavailable("No Python 3.11 or newer was found.");
+        rig.Ui.Pump();
+
+        Assert.True(rig.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Offer, setup.State);
+    }
+
+    [Fact]
+    public async Task WhenEverythingIsThere_TheOfferDisappears()
+    {
+        var setup = NewSetup();
+        using var rig = Create(zh: false, setup: setup);
+        await StartAsync(rig);
+        Assert.Equal(SetupPanelState.Offer, setup.State);
+
+        rig.Catalog.Add("zh", "en");
+        await rig.Translation.RefreshModelsCommand.ExecuteAsync();
+        rig.Ui.Pump();
+
+        Assert.False(rig.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Hidden, setup.State);
+    }
+
+    [Fact]
+    public async Task AfterASuccessfulSetup_TheModelsAndConnectionsAreCheckedAgain()
+    {
+        var fake = new SetupViewModelTests.FakeSetup();
+        var setup = new SetupViewModel(fake, uiContext: null);
+        using var rig = Create(zh: false, setup: setup);
+        await StartAsync(rig);
+        int catalogCalls = rig.Catalog.CatalogCalls;
+        int probes = rig.Probe.Calls.Count;
+        fake.OnRun = () => rig.Catalog.Add("zh", "en");
+
+        setup.ShowConsentCommand.Execute(null);
+        await setup.StartCommand.ExecuteAsync();
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (rig.Probe.Calls.Count <= probes && DateTime.UtcNow < deadline)
+        {
+            rig.Ui.Pump();
+            await Task.Delay(10);
+        }
+
+        await Task.Delay(50);
+        rig.Ui.Pump();
+
+        Assert.True(rig.Catalog.CatalogCalls > catalogCalls);
+        Assert.True(rig.Probe.Calls.Count > probes);
+        Assert.Equal(StatusLevel.Ok, rig.Row("model-zh").Level);
+        Assert.False(rig.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Succeeded, setup.State); // the success note stays until the user closes it
+    }
+
+    [Fact]
+    public async Task TheModelRow_PointsAtInstallEverything()
+    {
+        using var rig = Create(zh: false);
+        await StartAsync(rig);
+
+        Assert.Contains("Install everything", rig.Row("model-zh").Detail, StringComparison.Ordinal);
     }
 }

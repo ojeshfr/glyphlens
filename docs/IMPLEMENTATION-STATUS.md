@@ -246,8 +246,43 @@ Newest last. Each entry: task, files, tests executed, result, what remains.
   One intermittent failure seen once in the full run under load: `WorkerProcessManagerTests.AWorkerThatRanStably_DoesNotCountAgainstTheRestartBudget`
   (timing-based restart waits); it passed 4/4 alone and in the full-suite rerun. Root cause not investigated.
 
+### 9. Licence, commit and first preview release (2026-11-21) - PUBLISHED, verified as far as stated
+- **Licence: Apache-2.0** (the owner asked for it to be chosen for them): `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES.md` (licences read from package metadata and the
+  upstream repositories), ADR-0007, `LICENSE-CHOICE.md`. Not legal advice; a permissive licence cannot be withdrawn for copies already published.
+- **Committed and pushed with the owner's approval:** commit `c898501` on `main` (244 files; `site/` was left out). Before the commit: a scan of the files found no
+  secrets, emails or personal paths; format check clean; .NET tests Core 479, Infrastructure 497, App 345, Windows 148 (+7 skipped) passed; Python worker tests
+  395 OK (16 skipped: the opt-in real-model tests without their environment variables). The CI run for the push was `in_progress` when last looked at.
+- **Release `v0.1.0-preview`** (GitHub pre-release, tag on `c898501`): `GlyphLens-0.1.0-preview-win-x64.zip` (7,180,510 bytes) and its `.sha256`, built by
+  `tools/make-release.ps1` (framework-dependent publish, worker source, licence files, `README-PREVIEW.txt`; no installer, no models, no Python packages, unsigned).
+  SHA-256 `dcbe20416b26e61ca73f9105a14751fb313a8a8953afa339f31c41a1b3317124`. **PASS:** the zip's entries were inspected (58, forward slashes, no `.pdb`/`.xml`);
+  the extracted `GlyphLens.exe` started, responded (title "GlyphLens") and closed cleanly; the extracted worker answered `--version` and `--health`; the file
+  downloaded back from the public release URL has the same SHA-256. **NOT TESTED:** the translate-from-screen flow from the zip's folder layout (it was
+  verified from the repository build), a clean machine without the repository's Python environment, Windows 10, SmartScreen behaviour, installing the pip
+  engines from the README-PREVIEW steps on a fresh machine.
+- Two bugs in the first versions of the release script were found by inspecting the output (an empty zip from a wrong `-Include` use, backslash entry names) and fixed.
+
+### 10. New website `site/` (2026-11-21) - LIVE on GitHub Pages, `site/` source NOT YET COMMITTED
+- Vite 8 + React 19 + TypeScript + Tailwind 4 with shadcn/ui components on Radix (tabs, accordion, toggle group, tooltip, sheet/dialog, button, badge, card, copy
+  button), `motion` and lucide icons; every dependency pinned in `package-lock.json`; Inter is self-hosted. Source in `site/`, output in `site/dist`
+  (about 1.4 MB, relative paths so it works under `/glyphlens/`). The Download section reads one typed file, `site/src/release.ts`, and is set to the real
+  `v0.1.0-preview` zip (size, SHA-256, link, SmartScreen note, verify steps); the licence text on the page is Apache-2.0.
+- Checks run by the Opus agent that built it (its report, not all re-run by me): typecheck, ESLint, WCAG contrast of 31+ token pairs in both themes, screenshots at
+  1440/1024/768/390 px, no horizontal overflow from 320 to 1440 px, keyboard tab-through, tabs, accordion, mobile menu, theme control, both Download states
+  (the published state was first tested with dummy values, now reverted), copy button, layout shift 0.003, CSP enforced with no violation, `npm audit` 0 findings.
+- **Re-checked by me on the current build:** `npm test` exits 0 (typecheck, lint, 61 contrast pairs PASS, build, dist check); the page makes requests to its own origin
+  only (7 resources), no `securitypolicyviolation`, no broken images, no horizontal overflow at 390 and 1440 px, Download card shows the real file, size and links,
+  the footer links to `THIRD-PARTY-LICENSES.txt` (61 production packages, OFL-1.1 for Inter, MIT/ISC for the rest; added because minified bundles drop notices).
+- **IMPLEMENTED BUT UNVERIFIED:** `prefers-reduced-motion` handling (the browser tools cannot emulate it). **NOT TESTED:** a screen reader, browsers other than the
+  Chromium pane, the real GitHub Pages URL for this build. Build-only tools with other licences (lightningcss MPL-2.0, caniuse-lite CC-BY-4.0) are not shipped in the site.
+- **Published** at https://ojeshfr.github.io/glyphlens/ (owner asked for it so friends could see it): `gh-pages` commit `1da0ecc` holds the contents of `site/dist`
+  (the older static page was replaced; its source is still in `website/`). **PASS on the live URL:** Pages build `built`, all files return HTTP 200, the page loads
+  from its own origin only (7 resources), no policy violation, no console error, no broken image, no horizontal overflow at the pane width (541 px), the Download card
+  shows the real SHA-256 and links, the Apache-2.0 FAQ text is present, no stale "not released yet"/"no licence" text, and the release zip link redirects and resolves
+  with HTTP 200. **NOT TESTED** on the live URL: other browsers and a real phone. The `site/` source and the docs edits are not committed to `main` yet.
+
 ### Open items at the end of this session
 - Rerun `drive-keyboard-e2e.ps1` and the other E2E scripts on the current (restyled) build, and look at the running app on screen.
 - Other DPI scales, real screen readers, multi-monitor, Windows 10: NOT TESTED.
 - Alternative translation model evaluation (above); BPE-tokenizer Argos packages; a region-masking fallback for self-capture on builds without `WDA_EXCLUDEFROMCAPTURE`.
-- Nothing is committed or pushed; the working tree awaits the user's review.
+- Code signing and an installer; a real run of the updater against a published release.
+- `site/` (the new website source) is not committed yet.

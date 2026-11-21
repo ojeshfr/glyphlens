@@ -125,6 +125,14 @@ internal sealed class FakeWorkerManager : IWorkerProcessManager
         Move(WorkerStatus.Error, reason);
     }
 
+    /// <summary>What the real manager reports when no Python interpreter can be found.</summary>
+    public void BecomeUnavailable(string reason)
+    {
+        LastError = reason;
+        LastHealth = null;
+        Move(WorkerStatus.Unavailable, reason);
+    }
+
     private void Move(WorkerStatus next, string? reason = null)
     {
         var previous = Status;

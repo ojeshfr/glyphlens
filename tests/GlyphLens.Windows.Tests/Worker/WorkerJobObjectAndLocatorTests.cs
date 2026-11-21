@@ -131,3 +131,101 @@ public class WorkerLocatorTests
         Assert.Equal(new Version(3, 11), WorkerLocator.MinimumPythonVersion);
     }
 }
+
+public sealed class WorkerLocatorOrderTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "glyphlens-locator-" + Guid.NewGuid().ToString("N"));
+
+    public WorkerLocatorOrderTests() => Directory.CreateDirectory(_root);
+
+    public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    private string File(params string[] parts)
+    {
+        string path = Path.Combine([_root, .. parts]);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        System.IO.File.WriteAllText(path, string.Empty);
+        return path;
+    }
+
+    private static Func<string, string?> Env(Dictionary<string, string?> values) => name => values.GetValueOrDefault(name);
+
+    [Fact]
+    public void TheManagedRuntime_ComesBeforeWorkerVenv_WhichComesBeforePath()
+    {
+        string managed = File("runtime", "venv", "Scripts", "python.exe");
+        File("worker", "glyphlens_worker", "__main__.py");
+        string workerVenv = File("worker", ".venv", "Scripts", "python.exe");
+        string onPath = File("bin", "python.exe");
+        var env = Env(new()
+        {
+            [GlyphLens.Core.Setup.RuntimeDirectory.EnvironmentVariable] = Path.Combine(_root, "runtime"),
+            [WorkerLocator.WorkerDirectoryEnvironmentVariable] = Path.Combine(_root, "worker"),
+            ["PATH"] = Path.Combine(_root, "bin"),
+        });
+
+        var candidates = WorkerLocator.AutomaticCandidates(env).Take(3).ToList();
+
+        Assert.Equal([managed, workerVenv, onPath], candidates);
+    }
+
+    [Fact]
+    public void TheManagedRuntime_DefaultsToLocalAppData()
+    {
+        string managed = File("LocalAppData", "GlyphLens", "runtime", "venv", "Scripts", "python.exe");
+
+        Assert.Equal(managed, WorkerLocator.ManagedRuntimeInterpreter(Env(new() { ["LOCALAPPDATA"] = Path.Combine(_root, "LocalAppData") })));
+    }
+
+    [Theory]
+    [InlineData("runtime")]
+    [InlineData(@"\\server\share\runtime")]
+    public void AnUnusableRuntimeOverride_IsNotUsed(string value)
+    {
+        File("LocalAppData", "GlyphLens", "runtime", "venv", "Scripts", "python.exe");
+
+        Assert.Null(WorkerLocator.ManagedRuntimeInterpreter(Env(new()
+        {
+            [GlyphLens.Core.Setup.RuntimeDirectory.EnvironmentVariable] = value,
+            ["LOCALAPPDATA"] = Path.Combine(_root, "LocalAppData"),
+        })));
+    }
+
+    [Fact]
+    public void AManagedRuntimeWithoutAnEnvironment_IsNotACandidate() =>
+        Assert.Null(WorkerLocator.ManagedRuntimeInterpreter(Env(new() { [GlyphLens.Core.Setup.RuntimeDirectory.EnvironmentVariable] = Path.Combine(_root, "empty") })));
+
+    [Fact]
+    public void AConfiguredInterpreter_StillWins_AndIsNeverReplaced()
+    {
+        File("runtime", "venv", "Scripts", "python.exe");
+        var env = Env(new()
+        {
+            [GlyphLens.Core.Setup.RuntimeDirectory.EnvironmentVariable] = Path.Combine(_root, "runtime"),
+            [WorkerLocator.PythonEnvironmentVariable] = @"C:\no\such\python.exe",
+        });
+
+        var ex = Assert.Throws<WorkerException>(() => WorkerLocator.FindPython(null, env));
+
+        Assert.Contains(@"C:\no\such\python.exe", ex.Message, StringComparison.Ordinal);
+    }
+
+    [WorkerIntegrationFact]
+    public void ARealManagedVenv_IsFoundAndValidated_BeforeAnyOtherPython()
+    {
+        string runtime = Path.Combine(_root, "runtime");
+        using (var venv = WorkerTestEnvironment.StartPython("-m", "venv", "--without-pip", Path.Combine(runtime, "venv")))
+        {
+            Assert.True(venv.WaitForExit(120_000));
+            Assert.Equal(0, venv.ExitCode);
+        }
+
+        var found = WorkerLocator.FindPython(null, Env(new()
+        {
+            [GlyphLens.Core.Setup.RuntimeDirectory.EnvironmentVariable] = runtime,
+            ["PATH"] = Environment.GetEnvironmentVariable("PATH"),
+        }));
+
+        Assert.Equal(Path.Combine(runtime, "venv", "Scripts", "python.exe"), found.Path, ignoreCase: true);
+    }
+}

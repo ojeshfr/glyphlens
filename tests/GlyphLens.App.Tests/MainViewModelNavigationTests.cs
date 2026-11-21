@@ -87,11 +87,14 @@ public sealed class MainViewModelNavigationTests
     }
 
     [Fact]
-    public void ThePrivacyText_NamesTheUpdateCheckAsTheOnlyNetworkUse_AndNoPersistence_AndDoesNotOverclaim()
+    public void ThePrivacyText_NamesTheUpdateCheckAndTheUserStartedSetupAsTheOnlyNetworkUse_AndNoPersistence_AndDoesNotOverclaim()
     {
         using var main = Create();
 
-        Assert.Contains("only network requests are update checks", main.PrivacyText, StringComparison.Ordinal);
+        Assert.Contains("uses the network only for two things", main.PrivacyText, StringComparison.Ordinal);
+        Assert.Contains("Update checks", main.PrivacyText, StringComparison.Ordinal);
+        Assert.Contains("only when you click it on the Overview page and confirm", main.PrivacyText, StringComparison.Ordinal);
+        Assert.Contains("pinned hash", main.PrivacyText, StringComparison.Ordinal);
         Assert.Contains("never leaves this computer", main.PrivacyText, StringComparison.Ordinal);
         Assert.DoesNotContain("no network requests", main.PrivacyText, StringComparison.Ordinal);
         Assert.Contains("never written to disk", main.PrivacyText, StringComparison.Ordinal);

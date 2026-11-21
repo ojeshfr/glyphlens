@@ -167,6 +167,10 @@ public sealed partial class ThemeTokensTests
             ("OnStatusColor", "ErrorColor", 3.0),
             ("AccentTextColor", "SidebarBackgroundColor", 3.0),
             ("TextPrimaryColor", "SegmentSelectedColor", 4.5),
+            ("TextPrimaryColor", "AccentSubtleColor", 7.0), // the "Install everything" offer
+            ("TextSecondaryColor", "AccentSubtleColor", 4.5),
+            ("TextPrimaryColor", "SurfaceSecondaryColor", 7.0), // the setup's consent and step panels
+            ("ErrorTextColor", "SurfaceSecondaryColor", 4.5), // a failed step's title
         ];
         var data = new TheoryData<string, string, string, double>();
         foreach (string palette in new[] { "Light", "Dark" })
