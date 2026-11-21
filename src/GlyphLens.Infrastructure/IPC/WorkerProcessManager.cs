@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using GlyphLens.Core.Abstractions;
 using GlyphLens.Core.Contracts;
 using GlyphLens.Core.Events;
@@ -59,7 +60,7 @@ public sealed record WorkerManagerOptions
 /// sequence with exponential backoff; nothing restarts during an intentional stop.
 /// </para>
 /// </remarks>
-public sealed class WorkerProcessManager : IWorkerProcessManager, IAsyncDisposable
+public sealed class WorkerProcessManager : IWorkerProcessManager, IWorkerRequestChannel, IAsyncDisposable
 {
     private readonly IWorkerPipeListenerFactory _listeners;
     private readonly IWorkerProcessLauncher _launcher;
@@ -232,6 +233,49 @@ public sealed class WorkerProcessManager : IWorkerProcessManager, IAsyncDisposab
 
             throw;
         }
+    }
+
+    /// <summary>
+    /// Sends one request over the live worker connection and returns the response payload (<see langword="null"/> when
+    /// the worker sent none). This is the channel the translation clients use.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// It never starts or restarts the worker: when no authenticated connection is live it fails with
+    /// <see cref="WorkerErrorKind.NotConnected"/>. A request timeout does not close the connection and does not count
+    /// towards the hung-worker detection (a worker that is busy translating is not hung). The worker lifecycle messages
+    /// (<c>worker.initialize</c>, <c>worker.shutdown</c>) belong to this manager and are refused here.
+    /// </para>
+    /// <para>
+    /// Payloads are private screen content. They are serialised straight onto the pipe and are never logged or copied
+    /// into an exception message.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="WorkerException">
+    /// <see cref="WorkerErrorKind.NotConnected"/> (no live connection), <see cref="WorkerErrorKind.Rejected"/> (the worker
+    /// answered with an <c>error</c>; see <see cref="WorkerException.ErrorCode"/>), <see cref="WorkerErrorKind.RequestTimeout"/>,
+    /// <see cref="WorkerErrorKind.ConnectionLost"/>, <see cref="WorkerErrorKind.TooManyRequests"/> or
+    /// <see cref="WorkerErrorKind.ProtocolViolation"/>.
+    /// </exception>
+    public async Task<JsonElement?> RequestAsync(string messageType, object? payload, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeout, TimeSpan.Zero);
+        if (messageType is WorkerMessageTypes.WorkerInitialize or WorkerMessageTypes.WorkerShutdown)
+        {
+            throw new ArgumentException("The worker lifecycle messages are sent by the manager itself.", nameof(messageType));
+        }
+
+        var session = Volatile.Read(ref _session);
+        if (session is null || Status != WorkerStatus.Ready)
+        {
+            throw new WorkerException(WorkerErrorKind.NotConnected, "The worker is not running.");
+        }
+
+        var response = await session.Connection
+            .RequestAsync(messageType, payload, timeout, cancellationToken)
+            .ConfigureAwait(false);
+        return response.Payload;
     }
 
     public async ValueTask DisposeAsync()

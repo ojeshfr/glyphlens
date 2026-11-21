@@ -1,0 +1,124 @@
+<UserControl x:Class="GlyphLens.App.Views.TranslationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:TranslationViewModel}"
+             d:DesignWidth="364">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+
+    <StackPanel>
+        <Grid Margin="0,0,0,12">
+            <TextBlock Text="Translation" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="Argos · offline" Style="{StaticResource MutedText}" FontSize="11"
+                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+
+        <ToggleButton Content="Translate recognised text" IsChecked="{Binding IsEnabled}" Style="{StaticResource Switch}" Margin="0,0,0,10"
+                      AutomationProperties.AutomationId="TranslateToggle" AutomationProperties.Name="Translate recognised text" />
+
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <!-- source names are long ("Detect automatically"), the target is short; too narrow, a name ends in an ellipsis -->
+                <ColumnDefinition Width="1.6*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="From" Style="{StaticResource MutedText}" FontSize="11" Margin="0,0,0,3" />
+                <ComboBox ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" ToolTip="{Binding SelectedSource.Label}"
+                          AutomationProperties.AutomationId="TranslationSourceSelector" AutomationProperties.Name="Source language">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="To" Style="{StaticResource MutedText}" FontSize="11" Margin="0,0,0,3" />
+                <ComboBox ItemsSource="{Binding TargetOptions}" SelectedItem="{Binding SelectedTarget}" ToolTip="{Binding SelectedTarget.Label}"
+                          AutomationProperties.AutomationId="TranslationTargetSelector" AutomationProperties.Name="Target language">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Text="{Binding EngineSummaryText}" Style="{StaticResource MutedText}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"
+                   AutomationProperties.AutomationId="TranslationEngineText" />
+
+        <ItemsControl ItemsSource="{Binding Notices}" Visibility="{Binding HasNotices, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,4">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Margin="0,0,0,6">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource WarningBanner}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsInfo}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource ErrorSubtleBrush}" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" AutomationProperties.AutomationId="TranslationNotice" />
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Button Content="Start worker" Command="{Binding StartWorkerCommand}" Padding="0,6" Margin="0,0,0,8" HorizontalAlignment="Stretch"
+                Visibility="{Binding CanStartWorker, Converter={StaticResource BoolToVisibility}}"
+                AutomationProperties.AutomationId="TranslationStartWorkerButton" />
+
+        <TextBlock Text="{Binding StatusText}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                   AutomationProperties.AutomationId="TranslationStatusText" />
+
+        <ListBox ItemsSource="{Binding Items}" MaxHeight="260" MinHeight="60" HorizontalContentAlignment="Stretch"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 AutomationProperties.AutomationId="TranslationResultsList" AutomationProperties.Name="Translations">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="0,3" AutomationProperties.Name="{Binding AutomationName}">
+                        <TextBlock Text="{Binding Original}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Translated}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource AccentTextBrush}"
+                                   Visibility="{Binding HasTranslation, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding Note}" TextWrapping="Wrap" FontSize="11" Margin="0,2,0,0"
+                                   Visibility="{Binding HasNote, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsProblem}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Language}" Style="{StaticResource MutedText}" FontSize="10" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <UniformGrid Columns="2" Margin="0,10,0,0">
+            <Button Content="Copy original" Command="{Binding CopyOriginalCommand}" Padding="12,6" HorizontalAlignment="Stretch" Margin="0,0,4,0"
+                    AutomationProperties.AutomationId="CopyOriginalButton" />
+            <Button Content="Copy translation" Command="{Binding CopyTranslationCommand}" Padding="12,6" HorizontalAlignment="Stretch" Margin="4,0,0,0"
+                    AutomationProperties.AutomationId="CopyTranslationButton" />
+        </UniformGrid>
+    </StackPanel>
+</UserControl>

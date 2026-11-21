@@ -8,60 +8,323 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="{Binding ProductName}"
-        Width="1240"
-        Height="780"
-        MinWidth="980"
-        MinHeight="640"
-        Background="{StaticResource WindowBrush}"
+        Width="1000"
+        Height="700"
+        MinWidth="820"
+        MinHeight="580"
+        FontFamily="{StaticResource UiFont}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        Background="{DynamicResource WindowBackgroundBrush}"
         WindowStartupLocation="CenterScreen">
-    <Grid Margin="24,18,24,20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
-        <!-- Header -->
-        <Grid Grid.Row="0" Margin="0,0,0,16">
-            <StackPanel Orientation="Horizontal">
-                <Border Width="36" Height="36" CornerRadius="9" Background="{StaticResource AccentBrush}" Margin="0,0,12,0" VerticalAlignment="Center">
-                    <TextBlock Text="G" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ProductName}" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Tagline}" Style="{StaticResource MutedText}" FontSize="12" />
+        <!--
+            Sidebar entries (a macOS source list): an icon and a label; the selected entry is filled with the accent colour while the
+            list has the keyboard focus and with grey otherwise, so moving focus into the list is visible. Named for screen readers.
+        -->
+        <Style x:Key="NavItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="FontSize" Value="{StaticResource BodyFontSize}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="AutomationProperties.AutomationId" Value="{Binding AutomationId}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Chrome" Background="Transparent" CornerRadius="{StaticResource ControlCornerRadius}" Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="Icon" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="15" Width="20"
+                                           Foreground="{DynamicResource AccentTextBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SidebarHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource ControlFillPressedBrush}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True" />
+                                    <Condition Property="Selector.IsSelectionActive" Value="True" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="184" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBackgroundBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="12,20,12,16">
+                <StackPanel DockPanel.Dock="Top" Margin="6,0,0,22">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="G" FontFamily="{StaticResource DisplayFont}" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource OnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="{Binding ProductName}" FontFamily="{StaticResource DisplayFont}" FontSize="{StaticResource SectionFontSize}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Tagline}" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" TextWrapping="Wrap" Margin="0,10,0,0" />
                 </StackPanel>
-            </StackPanel>
-            <TextBlock Text="{Binding VersionInfo}" Style="{StaticResource MutedText}" FontSize="12"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" />
-        </Grid>
 
-        <!-- Body: capture on the left, worker and about on the right -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="400" />
-            </Grid.ColumnDefinitions>
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding VersionInfo}" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" TextWrapping="Wrap" Margin="6,0,0,0"
+                           AutomationProperties.AutomationId="VersionInfoText" />
 
-            <Border Grid.Column="0" Style="{StaticResource Card}">
-                <views:CaptureView DataContext="{Binding Capture}" />
-            </Border>
+                <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedNavItem}" ItemContainerStyle="{StaticResource NavItemStyle}"
+                         BorderThickness="0" Background="Transparent" Padding="0" AutomationProperties.AutomationId="NavList" AutomationProperties.Name="Pages" />
+            </DockPanel>
+        </Border>
 
-            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+        <!-- Pages -->
+        <Grid Grid.Column="1" Margin="24,20,24,20">
+
+            <!-- Overview: is everything in place, and the overlay controls -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding IsOverviewPage, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel>
+                    <TextBlock Text="Overview" Style="{StaticResource PageTitle}" Margin="0,0,0,14" />
+
+                    <!-- a newer version is available (found by the update check) -->
+                    <Border Style="{StaticResource InfoBanner}" Margin="0,0,0,16" DataContext="{Binding Updates}"
+                            Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="View update" Margin="12,0,0,0" Padding="14,4" MinHeight="28"
+                                    Command="{Binding DataContext.OpenSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    AutomationProperties.AutomationId="OverviewViewUpdateButton" />
+                            <TextBlock Text="{Binding BannerText}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"
+                                       AutomationProperties.AutomationId="OverviewUpdateBanner" />
+                        </DockPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" DataContext="{Binding Readiness}" Margin="0,0,0,16">
+                        <views:ReadinessView />
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" DataContext="{Binding Overlay}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="Translation overlay" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Text="{Binding StateText}" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           AutomationProperties.AutomationId="OverlayActivityText" />
+                            </Grid>
+                            <TextBlock Text="Translations appear in a small floating window above your other applications. This window only manages it."
+                                       Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10" />
+                            <UniformGrid Columns="2" Margin="0,0,0,8">
+                                <Button Content="Show overlay" Command="{Binding ShowCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,4,0"
+                                        AutomationProperties.AutomationId="ShowOverlayButton" />
+                                <Button Content="Hide overlay" Command="{Binding HideCommand}" Margin="4,0,0,0"
+                                        AutomationProperties.AutomationId="HideOverlayButton" />
+                            </UniformGrid>
+                            <UniformGrid Columns="2" Margin="0,0,0,8">
+                                <Button Command="{Binding ToggleInteractiveCommand}" Margin="0,0,4,0" AutomationProperties.AutomationId="OverlayModeMainButton">
+                                    <TextBlock Text="{Binding ModeText, StringFormat='Mode: {0}'}" />
+                                </Button>
+                                <Button Content="Pause / resume" Command="{Binding TogglePauseCommand}" Margin="4,0,0,0"
+                                        AutomationProperties.AutomationId="OverlayPauseMainButton" />
+                            </UniformGrid>
+                            <TextBlock Text="{Binding ShortcutsText}" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" TextWrapping="Wrap" Margin="0,0,0,4"
+                                       AutomationProperties.AutomationId="OverlayShortcutsText" />
+                            <TextBlock Text="{Binding CaptureProtectionText}" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" TextWrapping="Wrap"
+                                       AutomationProperties.AutomationId="OverlayMainProtectionText" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Capture: the target, text recognition and the translation results -->
+            <Grid Visibility="{Binding IsCapturePage, Converter={StaticResource BoolToVisibility}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Capture" Style="{StaticResource PageTitle}" Margin="0,0,0,14" />
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <!-- Both columns share the width; at the window's minimum width (about 570 DIP here) they get 254 + 300 DIP. -->
+                        <ColumnDefinition Width="*" MinWidth="240" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" MinWidth="300" MaxWidth="420" />
+                    </Grid.ColumnDefinitions>
+                    <!-- fills the height when there is room (the preview grows); scrolls when the window is short -->
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,18">
+                            <views:CaptureView DataContext="{Binding Capture}" MinHeight="480"
+                                               Height="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                        </ScrollViewer>
+                    </Border>
+                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Style="{StaticResource Card}">
+                                <views:OcrView DataContext="{Binding Ocr}" />
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                                <views:TranslationView DataContext="{Binding Translation}" />
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <!-- Models: translation models, the OCR models, the worker -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding IsModelsPage, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel MaxWidth="640" HorizontalAlignment="Left">
+                    <TextBlock Text="Models" Style="{StaticResource PageTitle}" Margin="0,0,0,14" />
+
                     <Border Style="{StaticResource Card}">
-                        <views:OcrView DataContext="{Binding Ocr}" />
+                        <views:ModelsView DataContext="{Binding Translation}" />
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0" DataContext="{Binding Ocr}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="Chinese OCR models" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Text="local files only" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBlock TextWrapping="Wrap" Style="{StaticResource MutedText}" FontSize="12" Margin="0,0,0,10"
+                                       Text="The local Chinese OCR (PP-OCRv5, official ONNX exports) reads Simplified and Traditional Chinese, English and Japanese. Put the PP-OCRv5_mobile_det_onnx and PP-OCRv5_mobile_rec_onnx folders in the OCR models folder; GlyphLens never downloads them. The Overview shows whether the worker found them." />
+                            <Button Content="Open OCR folder" Command="{Binding OpenOcrFolderCommand}" HorizontalAlignment="Left"
+                                    AutomationProperties.AutomationId="ModelsOpenOcrFolderButton" />
+                        </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                         <views:WorkerView DataContext="{Binding Worker}" />
                     </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Settings: only what is really configurable, plus privacy and version -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel MaxWidth="640" HorizontalAlignment="Left">
+                    <TextBlock Text="Settings" Style="{StaticResource PageTitle}" Margin="0,0,0,14" />
+
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,16" DataContext="{Binding Appearance}"
+                            Visibility="{Binding DataContext.HasAppearance, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="Appearance" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
+                            <Border Style="{StaticResource SegmentedTrack}" HorizontalAlignment="Left">
+                                <UniformGrid Rows="1">
+                                    <RadioButton Content="System" GroupName="Theme" IsChecked="{Binding IsSystem}" Style="{StaticResource Segment}"
+                                                 AutomationProperties.AutomationId="SettingsThemeSystem" AutomationProperties.Name="Appearance: follow Windows" />
+                                    <RadioButton Content="Light" GroupName="Theme" IsChecked="{Binding IsLight}" Style="{StaticResource Segment}"
+                                                 AutomationProperties.AutomationId="SettingsThemeLight" AutomationProperties.Name="Appearance: light" />
+                                    <RadioButton Content="Dark" GroupName="Theme" IsChecked="{Binding IsDark}" Style="{StaticResource Segment}"
+                                                 AutomationProperties.AutomationId="SettingsThemeDark" AutomationProperties.Name="Appearance: dark" />
+                                </UniformGrid>
+                            </Border>
+                            <TextBlock Text="{Binding Description}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,8,0,0"
+                                       AutomationProperties.AutomationId="SettingsThemeDescription" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" DataContext="{Binding Overlay}">
+                        <StackPanel>
+                            <TextBlock Text="Overlay appearance" Style="{StaticResource SectionTitle}" Margin="0,0,0,12" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Opacity" VerticalAlignment="Center" />
+                                <Slider Grid.Column="1" Minimum="0.35" Maximum="1" Value="{Binding Opacity, Mode=TwoWay}" TickFrequency="0.05" IsSnapToTickEnabled="False" VerticalAlignment="Center"
+                                        AutomationProperties.AutomationId="SettingsOpacitySlider" AutomationProperties.Name="Overlay opacity" />
+                            </Grid>
+                            <Border Style="{StaticResource RowSeparator}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Text size" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Content="A&#x2212;" Command="{Binding DecreaseFontCommand}" MinWidth="44" Padding="12,5" Margin="0,0,6,0"
+                                        AutomationProperties.AutomationId="SettingsFontSmallerButton" AutomationProperties.Name="Smaller overlay text" />
+                                <Button Grid.Column="2" Content="A+" Command="{Binding IncreaseFontCommand}" MinWidth="44" Padding="12,5" Margin="0,0,12,0"
+                                        AutomationProperties.AutomationId="SettingsFontLargerButton" AutomationProperties.Name="Larger overlay text" />
+                                <TextBlock Grid.Column="3" Text="{Binding FontSize, StringFormat='{}{0:0} px (the translation is one larger)'}" Style="{StaticResource MutedText}" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" AutomationProperties.AutomationId="SettingsFontSizeText" />
+                            </Grid>
+                            <Border Style="{StaticResource RowSeparator}" />
+                            <CheckBox Content="Keep the overlay above other windows" IsChecked="{Binding IsPinned, Mode=TwoWay}" Style="{StaticResource Switch}"
+                                      AutomationProperties.AutomationId="SettingsPinCheckBox" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0" DataContext="{Binding Overlay}">
+                        <StackPanel>
+                            <TextBlock Text="Shortcuts" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
+                            <TextBlock Text="{Binding ShortcutsText}" TextWrapping="Wrap" AutomationProperties.AutomationId="SettingsShortcutsText" />
+                            <TextBlock Text="A shortcut that another program already owns is reported here and is never forced. Shortcuts are fixed in this version." Style="{StaticResource MutedText}"
+                                       FontSize="{StaticResource LabelFontSize}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0" DataContext="{Binding Updates}"
+                            Visibility="{Binding DataContext.HasUpdates, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="Updates" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Text="{Binding CurrentVersionText}" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           AutomationProperties.AutomationId="SettingsCurrentVersion" />
+                            </Grid>
+                            <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" AutomationProperties.AutomationId="SettingsUpdateStatus" />
+                            <TextBlock Text="{Binding LastCheckedText}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,2,0,0"
+                                       AutomationProperties.AutomationId="SettingsUpdateLastChecked" />
+                            <Border Style="{StaticResource InfoBanner}" Margin="0,10,0,0" Visibility="{Binding HasNotes, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding Notes}" TextWrapping="Wrap" FontSize="12" AutomationProperties.AutomationId="SettingsUpdateNotes" />
+                            </Border>
+                            <WrapPanel Margin="0,12,0,0">
+                                <Button Content="Check now" Command="{Binding CheckNowCommand}" Margin="0,0,8,8"
+                                        AutomationProperties.AutomationId="SettingsCheckUpdatesButton" AutomationProperties.Name="Check for updates now" />
+                                <Button Content="Download update" Command="{Binding DownloadCommand}" Margin="0,0,8,8"
+                                        Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibility}}"
+                                        AutomationProperties.AutomationId="SettingsDownloadUpdateButton" />
+                                <Button Content="Install and restart" Command="{Binding InstallCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"
+                                        Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibility}}"
+                                        AutomationProperties.AutomationId="SettingsInstallUpdateButton" />
+                            </WrapPanel>
+                            <Border Style="{StaticResource RowSeparator}" Margin="0,2,0,8" />
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding AutomaticChecks, Mode=TwoWay}" IsEnabled="{Binding IsConfigured}"
+                                      AutomationProperties.AutomationId="SettingsAutoUpdateCheckBox" AutomationProperties.Name="Check for updates automatically">
+                                <StackPanel>
+                                    <TextBlock Text="Check for updates automatically" />
+                                    <TextBlock Text="About once a day; only the check itself is sent, never anything from your screen."
+                                               Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                        </StackPanel>
+                    </Border>
 
                     <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Privacy and local processing" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
+                            <TextBlock Text="{Binding PrivacyText}" TextWrapping="Wrap" AutomationProperties.AutomationId="PrivacyText" />
+                            <TextBlock Text="{Binding Overlay.CaptureProtectionText}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,16">
                         <StackPanel>
                             <TextBlock Text="About this build" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
                             <TextBlock Text="{Binding FoundationStatus}" FontWeight="SemiBold" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding FeatureStatus}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding VersionInfo}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

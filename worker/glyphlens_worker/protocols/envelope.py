@@ -28,6 +28,8 @@ REQUEST_TYPES: frozenset[str] = frozenset(
         "translation.cancel",
         "models.list",
         "models.status",
+        "models.install",
+        "language.detect",
     }
 )
 

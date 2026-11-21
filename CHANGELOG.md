@@ -6,6 +6,12 @@ intends to use [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (licence and first preview release)
+
+- Apache License 2.0 (`LICENSE`), `NOTICE`, `THIRD-PARTY-NOTICES.md`, ADR-0007 and an updated `LICENSE-CHOICE.md`.
+- First preview release `v0.1.0-preview`: an unsigned `win-x64` zip (framework-dependent app plus the worker source). No installer, no
+  models. See the Releases page and `docs/RELEASING.md`.
+
 ### Added (Phase 2b: text recognition)
 
 - `WindowsOcrEngine` (`GlyphLens.Windows/Ocr`): `IOcrEngine` and `IOcrLanguageSource` implemented with the built-in Windows OCR

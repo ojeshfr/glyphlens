@@ -126,9 +126,15 @@ public sealed class RealWorkerProtocolTests
         await session.InitializeAsync();
 
         Assert.Equal("unknown_message_type", ErrorCode(await session.RequestAsync("worker.reboot")));
-        Assert.Equal("engine_unavailable", ErrorCode(await session.RequestAsync("ocr.detect", new { width = 1 })));
-        Assert.Equal("engine_unavailable", ErrorCode(await session.RequestAsync("translation.translate", new { text = "x" })));
-        Assert.Equal("engine_unavailable", ErrorCode(await session.RequestAsync("models.list")));
+        Assert.Equal("engine_unavailable", ErrorCode(await session.RequestAsync("translation.cancel", new { requestId = "x" })));
+
+        // The engine messages validate their input: a malformed request is refused, never answered with an invented result.
+        Assert.Equal("invalid_request", ErrorCode(await session.RequestAsync("ocr.detect", new { width = 1 })));
+        Assert.Equal("invalid_request", ErrorCode(await session.RequestAsync("translation.translate", new { text = "x" })));
+        Assert.Equal("invalid_request", ErrorCode(await session.RequestAsync("language.detect", new { text = "x" })));
+
+        // models.list reports what is installed (nothing is not an error).
+        Assert.Equal("models.list.result", (await session.RequestAsync("models.list")).MessageType);
     }
 
     [WorkerIntegrationFact]
@@ -300,7 +306,7 @@ public sealed class RealWorkerProtocolTests
         await session.RequestAsync("worker.shutdown");
         await session.WaitForExitCodeAsync();
 
-        Assert.Equal("engine_unavailable", ErrorCode(response));
+        Assert.Equal("invalid_request", ErrorCode(response));
         var logs = string.Join("\n", session.Process.RecentErrorOutput);
         Assert.Contains("req=t-9", logs, StringComparison.Ordinal);
         Assert.Contains("type=translation.translate", logs, StringComparison.Ordinal);

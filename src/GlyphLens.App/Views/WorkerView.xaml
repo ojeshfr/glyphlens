@@ -15,19 +15,19 @@
             <Setter Property="Width" Value="10" />
             <Setter Property="Height" Value="10" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Fill" Value="{StaticResource StatusIdleBrush}" />
+            <Setter Property="Fill" Value="{DynamicResource TextMutedBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Ready}">
-                    <Setter Property="Fill" Value="{StaticResource StatusOkBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Starting}">
-                    <Setter Property="Fill" Value="{StaticResource StatusBusyBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Error}">
-                    <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:WorkerStatus.Unavailable}">
-                    <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>

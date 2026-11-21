@@ -22,4 +22,9 @@
     <ProjectReference Include="..\GlyphLens.Infrastructure\GlyphLens.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Where the update feed is and the public key that verifies it (empty = updates not set up: nothing is ever checked). -->
+    <EmbeddedResource Include="Updates\update-config.json" LogicalName="GlyphLens.UpdateConfig.json" />
+  </ItemGroup>
+
 </Project>

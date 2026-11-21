@@ -5,6 +5,7 @@ using GlyphLens.App.Mvvm;
 using GlyphLens.Core.Abstractions;
 using GlyphLens.Core.Events;
 using GlyphLens.Core.Models;
+using GlyphLens.Core.Ocr;
 
 namespace GlyphLens.App.ViewModels;
 
@@ -12,7 +13,11 @@ namespace GlyphLens.App.ViewModels;
 public sealed record OcrLineItem(string Text, string BoundsText);
 
 /// <summary>A selectable recognition language. <see cref="Tag"/> is <see langword="null"/> for "automatic".</summary>
-public sealed record OcrLanguageOption(string? Tag, string Label);
+/// <remarks>The text form is the label: it is what a screen reader announces and what UI Automation reports as the item's name.</remarks>
+public sealed record OcrLanguageOption(string? Tag, string Label)
+{
+    public override string ToString() => Label;
+}
 
 /// <summary>
 /// State and commands of the text-recognition panel: read the text in the latest captured frame once, or keep reading
@@ -26,7 +31,7 @@ public sealed record OcrLanguageOption(string? Tag, string Label);
 /// cleared when capture stops. Copying to the clipboard happens only on the user's command.
 /// </para>
 /// </remarks>
-public sealed class OcrViewModel : ViewModelBase, IDisposable
+public sealed class OcrViewModel : ViewModelBase, IRecognisedTextSource, IDisposable
 {
     /// <summary>Default minimum time between live recognitions.</summary>
     public static readonly TimeSpan DefaultLiveInterval = TimeSpan.FromMilliseconds(600);
@@ -43,6 +48,10 @@ public sealed class OcrViewModel : ViewModelBase, IDisposable
     private readonly ObservableCollection<OcrLanguageOption> _languageOptions = [];
 
     private OcrLanguageOption _selectedLanguage;
+    private bool _userChoseLanguage;
+    private string? _engineNotice;
+    private bool _engineNoticeIsProblem;
+    private bool _offersOcrFolder;
     private CancellationTokenSource? _liveCts;
     private Task _liveTask = Task.CompletedTask;
     private string _statusText = "Start a capture, then read its text.";
@@ -109,9 +118,16 @@ public sealed class OcrViewModel : ViewModelBase, IDisposable
 
         ReadTextCommand = new AsyncRelayCommand(ReadOnceAsync, () => CanReadText, uiContext);
         CopyTextCommand = new AsyncRelayCommand(CopyAsync, () => CanCopy, uiContext);
+        OpenOcrFolderCommand = new DelegateCommand(() => OpenOcrFolderRequested?.Invoke(this, EventArgs.Empty));
 
         _capture.StatusChanged += OnCaptureStatusChanged;
     }
+
+    /// <inheritdoc />
+    public event EventHandler<RegionsRecognisedEventArgs>? RegionsRecognised;
+
+    /// <summary>Raised when the user asks to see the folder where the local OCR models belong.</summary>
+    public event EventHandler? OpenOcrFolderRequested;
 
     public ReadOnlyObservableCollection<OcrLineItem> Lines { get; }
 
@@ -121,18 +137,91 @@ public sealed class OcrViewModel : ViewModelBase, IDisposable
 
     public AsyncRelayCommand CopyTextCommand { get; }
 
+    public DelegateCommand OpenOcrFolderCommand { get; }
+
+    /// <summary>
+    /// The recognition language the user picked. Setting it is the user's explicit choice and is never overridden by
+    /// GlyphLens (see <see cref="UserChoseLanguage"/>); <see cref="SelectLanguageAutomatically"/> changes it without that.
+    /// </summary>
     public OcrLanguageOption SelectedLanguage
     {
         get => _selectedLanguage;
         set
         {
-            if (value is null || !SetProperty(ref _selectedLanguage, value))
+            if (value is null)
             {
                 return;
             }
 
-            _languages.SelectedLanguage = value.Tag;
+            _userChoseLanguage = true;
+            Apply(value);
         }
+    }
+
+    /// <summary>Whether the user has picked a recognition language themselves (as opposed to the default or an automatic switch).</summary>
+    public bool UserChoseLanguage => _userChoseLanguage;
+
+    /// <summary>Why the recognition engine is what it is, or what is missing for Chinese text; <see langword="null"/> when there is nothing to say.</summary>
+    public string? EngineNotice
+    {
+        get => _engineNotice;
+        private set
+        {
+            if (SetProperty(ref _engineNotice, value))
+            {
+                OnPropertyChanged(nameof(HasEngineNotice));
+            }
+        }
+    }
+
+    public bool HasEngineNotice => !string.IsNullOrEmpty(_engineNotice);
+
+    /// <summary>Whether <see cref="EngineNotice"/> reports something that prevents Chinese text from being read (as opposed to an explanation).</summary>
+    public bool EngineNoticeIsProblem
+    {
+        get => _engineNoticeIsProblem;
+        private set => SetProperty(ref _engineNoticeIsProblem, value);
+    }
+
+    /// <summary>Whether the notice's remedy is to put model files into the OCR models folder, so "Open OCR folder" is offered.</summary>
+    public bool OffersOcrFolder
+    {
+        get => _offersOcrFolder;
+        private set => SetProperty(ref _offersOcrFolder, value);
+    }
+
+    /// <summary>Selects a recognition language without it counting as the user's own choice.</summary>
+    /// <param name="tag">A language tag from <see cref="Languages"/> (for example <see cref="OcrEngineSelector.LocalEngineTag"/>).</param>
+    /// <returns><see langword="false"/> when no such entry exists.</returns>
+    public bool SelectLanguageAutomatically(string? tag)
+    {
+        var option = _languageOptions.FirstOrDefault(o => string.Equals(o.Tag, tag, StringComparison.Ordinal));
+        if (option is null)
+        {
+            return false;
+        }
+
+        Apply(option);
+        return true;
+    }
+
+    /// <summary>Shows the explanation of an <see cref="OcrAdvice"/> (the switch itself is made by the caller).</summary>
+    public void ShowEngineAdvice(OcrAdvice advice)
+    {
+        ArgumentNullException.ThrowIfNull(advice);
+        EngineNotice = advice.Message;
+        EngineNoticeIsProblem = advice.Severity == OcrAdviceSeverity.Problem;
+        OffersOcrFolder = advice.OffersModelsFolder;
+    }
+
+    private void Apply(OcrLanguageOption option)
+    {
+        if (!SetProperty(ref _selectedLanguage, option, nameof(SelectedLanguage)))
+        {
+            return;
+        }
+
+        _languages.SelectedLanguage = option.Tag;
     }
 
     public string StatusText
@@ -272,8 +361,13 @@ public sealed class OcrViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void Publish(IReadOnlyList<ScreenTextRegion> regions, FrameMetadata frame, TimeSpan elapsed)
+    private void Publish(IReadOnlyList<ScreenTextRegion> recognised, FrameMetadata frame, TimeSpan elapsed)
     {
+        // A captured window's own title bar (its button glyphs and its title) is not content: set aside, and say so.
+        string? windowTitle = _capture.CurrentTarget is { Kind: CaptureTargetKind.Window } target ? target.DisplayName : null;
+        var filtered = OcrChromeFilter.Filter(recognised, frame.Width, frame.Height, windowTitle);
+        var regions = filtered.Kept;
+
         _lines.Clear();
         var boxes = new List<OcrBox>(regions.Count);
         foreach (var region in regions)
@@ -287,9 +381,18 @@ public sealed class OcrViewModel : ViewModelBase, IDisposable
         var language = regions.Count > 0 ? regions[0].SourceLanguage : null;
         StatusText = string.Create(
             CultureInfo.InvariantCulture,
-            $"{regions.Count} line{(regions.Count == 1 ? string.Empty : "s")} · {elapsed.TotalMilliseconds:0} ms{(language is null ? string.Empty : " · " + language)}");
+            $"{regions.Count} line{(regions.Count == 1 ? string.Empty : "s")} · {elapsed.TotalMilliseconds:0} ms{(language is null ? string.Empty : " · " + language)}{(filtered.Skipped > 0 ? $" · {filtered.Skipped} title-bar item{(filtered.Skipped == 1 ? string.Empty : "s")} set aside" : string.Empty)}{DescribePass()}");
         OnPropertyChanged(nameof(RecognisedText));
+        RegionsRecognised?.Invoke(this, new RegionsRecognisedEventArgs(regions));
     }
+
+    /// <summary>Says when only part of the frame was read again or nothing changed (an incremental engine); empty after a full read.</summary>
+    private string DescribePass() => (_engine as IOcrPassReporter)?.LastPass switch
+    {
+        { Kind: OcrPassKind.Partial } pass => string.Create(CultureInfo.InvariantCulture, $" · updated {pass.ReadFraction * 100:0} % of the frame"),
+        { Kind: OcrPassKind.Unchanged } => " · screen unchanged",
+        _ => string.Empty,
+    };
 
     private void StartLive()
     {
@@ -411,11 +514,17 @@ public sealed class OcrViewModel : ViewModelBase, IDisposable
         {
             // Results describe a screen that is no longer being captured: clear them rather than leave stale text.
             StopLive();
+            bool hadResults = _lines.Count > 0;
             _lines.Clear();
             _overlay.Clear();
             ErrorMessage = _languages.AvailableLanguages.Count == 0 ? ErrorMessage : null;
             StatusText = "Start a capture, then read its text.";
             OnPropertyChanged(nameof(RecognisedText));
+            if (hadResults)
+            {
+                // Anything derived from these results (translations) must be forgotten too.
+                RegionsRecognised?.Invoke(this, new RegionsRecognisedEventArgs([], discarded: true));
+            }
         }
 
         Refresh();

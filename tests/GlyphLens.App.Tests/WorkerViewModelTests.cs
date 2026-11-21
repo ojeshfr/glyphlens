@@ -1,5 +1,6 @@
 using GlyphLens.App.ViewModels;
 using GlyphLens.Core.Models;
+using GlyphLens.Core.Translation;
 
 namespace GlyphLens.App.Tests;
 
@@ -294,12 +295,17 @@ public class WorkerViewModelTests
         var ocr = new FakeOcr();
         var ocrVm = new OcrViewModel(ocr, ocr, new FakeCaptureService(), capture.Overlay, null, null, TimeSpan.FromMilliseconds(10));
         var worker = new WorkerViewModel(manager, null);
-        var main = new MainViewModel(capture, ocrVm, worker);
+        var source = new FakeRecognisedSource();
+        var models = new FakeModelCatalog();
+        var pipeline = new TranslationPipeline(new FakeLanguageDetector(), models, new FakeTranslationEngine(), new LruTranslationCache());
+        var translation = new TranslationViewModel(pipeline, models, manager, source, null, null, null);
+        var main = new MainViewModel(capture, ocrVm, translation, new OverlayViewModel(translation), worker);
 
         Assert.Same(capture, main.Capture);
         Assert.Same(worker, main.Worker);
         Assert.Same(ocrVm, main.Ocr);
-        Assert.Contains("worker", main.FeatureStatus, StringComparison.OrdinalIgnoreCase);
+        Assert.Same(translation, main.Translation);
+        Assert.Contains("nothing is uploaded", main.FeatureStatus, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("not implemented", main.FeatureStatus, StringComparison.OrdinalIgnoreCase);
 
         main.Dispose();

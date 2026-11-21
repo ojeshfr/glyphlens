@@ -1,1 +1,1 @@
-"""Named Pipe server, request dispatch and cancellation. Not implemented in Phase 0."""
+"""The worker runtime: pipe client, request loop and dispatch, health, service wiring and the network guard."""

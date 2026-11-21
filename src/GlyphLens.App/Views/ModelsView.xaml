@@ -1,0 +1,55 @@
+<UserControl x:Class="GlyphLens.App.Views.ModelsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:GlyphLens.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:TranslationViewModel}"
+             d:DesignWidth="364">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </UserControl.Resources>
+
+    <StackPanel>
+        <Grid Margin="0,0,0,10">
+            <TextBlock Text="Translation models" Style="{StaticResource SectionTitle}" />
+            <TextBlock Text="local files only" Style="{StaticResource MutedText}" FontSize="11"
+                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+
+        <TextBlock Text="{Binding ModelsSummary}" TextWrapping="Wrap" Margin="0,0,0,8"
+                   AutomationProperties.AutomationId="ModelsSummaryText" />
+
+        <ItemsControl ItemsSource="{Binding Packages}" Margin="0,0,0,8" Focusable="False"
+                      AutomationProperties.AutomationId="ModelsList" AutomationProperties.Name="Installed translation models">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,2">
+                        <TextBlock Text="{Binding Direction}" />
+                        <TextBlock Text="{Binding Version, StringFormat='v{0}'}" Style="{StaticResource MutedText}" FontSize="11"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Text="{Binding StoragePath, StringFormat='Stored in {0}'}" Style="{StaticResource MutedText}" FontSize="10" TextWrapping="Wrap"
+                   Margin="0,0,0,10" Visibility="{Binding HasStoragePath, Converter={StaticResource BoolToVisibility}}"
+                   AutomationProperties.AutomationId="ModelsStoragePath" />
+
+        <UniformGrid Columns="2">
+            <Button Content="Import model…" Command="{Binding ImportModelCommand}" Padding="12,6" HorizontalAlignment="Stretch" Margin="0,0,4,0"
+                    AutomationProperties.AutomationId="ImportModelButton" />
+            <Button Content="Refresh" Command="{Binding RefreshModelsCommand}" Padding="12,6" HorizontalAlignment="Stretch" Margin="4,0,0,0"
+                    AutomationProperties.AutomationId="RefreshModelsButton" />
+        </UniformGrid>
+
+        <TextBlock Text="{Binding ModelsMessage}" Foreground="{DynamicResource SuccessBrush}" TextWrapping="Wrap" Margin="0,8,0,0"
+                   Visibility="{Binding HasModelsMessage, Converter={StaticResource BoolToVisibility}}"
+                   AutomationProperties.AutomationId="ModelsMessageText" />
+        <Border Style="{StaticResource ErrorBanner}" Margin="0,8,0,0" Visibility="{Binding HasModelsError, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{Binding ModelsError}" TextWrapping="Wrap" AutomationProperties.AutomationId="ModelsErrorText" />
+        </Border>
+    </StackPanel>
+</UserControl>

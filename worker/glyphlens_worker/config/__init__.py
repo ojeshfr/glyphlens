@@ -1,1 +1,1 @@
-"""Worker configuration (model directory, resource limits). Not implemented in Phase 0."""
+"""Worker configuration: the session pipe name and token, and the model directory."""

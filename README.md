@@ -44,7 +44,9 @@ Privacy and offline operation are core requirements, not optional extras.
 | Named Pipes transport (ACL, session token), Python worker pipe client, `worker.initialize` / `health` / `shutdown` | ✅ Implemented (Phase 2a) — see [docs/IPC-PROTOCOL.md](docs/IPC-PROTOCOL.md) |
 | Worker lifecycle manager (bounded restarts, Job Object) and WPF worker diagnostics panel | ✅ Implemented (Phase 2a) |
 | Text recognition with the built-in Windows OCR (`Windows.Media.Ocr`): language selector, Read text, Live reading, results list, boxes over the preview, Copy | ✅ Implemented (Phase 2b) — offline, no downloads; languages = the OCR packs installed in Windows; no confidence score (Windows OCR reports none) |
-| OCR (PaddleOCR), language detection, translation, models in the Python worker | ⏳ Not implemented (reported `NOT_IMPLEMENTED` / `NOT_INSTALLED`) |
+| **Chinese OCR** in the Python worker (PaddleOCR PP-OCRv5 on ONNX Runtime, `ocr.detect`) | ✅ Implemented — local model files, no download; measured 1.2 % CER on 10 real window captures, 0.4-1.3 s per window — [evaluation](docs/research/CHINESE-FIRST-EVALUATION.md) |
+| **Offline Chinese-to-English translation** (Argos zh/zt packages run with CTranslate2; script-based language identification; paragraph grouping; cache) | ✅ Implemented — gist-level quality with documented failure cases; real end-to-end tests passed (Simplified and Traditional) |
+| **Floating translation overlay** (WPF window above other applications, interactive / pass-through, self-capture exclusion, shortcuts) | ✅ Implemented and verified on one monitor (multi-monitor placement unit-tested only) |
 | Python engine compatibility (PaddleOCR, Argos Translate, CTranslate2) | 📄 Evaluated — [report](docs/research/PYTHON-ENGINE-COMPATIBILITY.md) |
 | Pipe ACL verification | 📄 [report](docs/research/PIPE-ACL-VERIFICATION.md) |
 | WPF application: capture diagnostic with target selector, start/stop, live preview, status and errors | ✅ Implemented (Phase 1) |
@@ -53,13 +55,12 @@ Privacy and offline operation are core requirements, not optional extras.
 | Region capture | ⏳ Planned — next capture milestone |
 | Multi-monitor / mixed-DPI / Windows 10 verification | ⏳ Not yet verified on hardware — [checklist](docs/CAPTURE-MANUAL-TESTS.md) |
 | UI Automation text extraction | ⏳ Planned — Phase 2 |
-| PaddleOCR as a second, multilingual OCR engine in the worker (`ocr.detect`) | ⏳ Planned — Phase 2 |
-| Text fusion, language detection | ⏳ Planned — Phase 3 |
-| Offline translation (Argos Translate) | ⏳ Planned — Phase 4 |
-| Floating overlay | ⏳ Planned — Phase 5 |
-| Side panel and history | ⏳ Planned — Phase 6 |
-| SQLite cache, hotkeys | ⏳ Planned |
-| Installer and releases | ⏳ Planned — Phase 8 |
+| Text fusion (accessibility + OCR) | ⏳ Planned — Phase 3 |
+| Other source languages (language identification library, BPE-tokenizer Argos packages) | ⏳ Planned — Chinese first |
+| Translation history, side panel | ⏳ Planned — Phase 6 |
+| Installer and models download UI | ⏳ Planned |
+| Installer | ⏳ Planned — Phase 8 |
+| Preview release (`v0.1.0-preview`: unsigned zip of the app plus the worker source, no installer, no models; needs the .NET 10 Desktop Runtime and Python) | 📦 See the repository's Releases page |
 
 ## Planned capabilities
 
@@ -189,10 +190,10 @@ See [docs/SECURITY.md](docs/SECURITY.md).
 | --- | --- |
 | 0 | Repository and foundation ✅ |
 | 1 | Windows screen capture ✅ (display and window; region capture pending) |
-| 2 | UI Automation and OCR ← **current**: 2a worker communication and 2b Windows OCR done; UI Automation and the PaddleOCR engine pending |
-| 3 | Text fusion and language detection |
-| 4 | Offline translation |
-| 5 | Floating translation overlay |
+| 2 | UI Automation and OCR: worker communication, Windows OCR and the Chinese-capable PaddleOCR engine done; UI Automation pending |
+| 3 | Text fusion and language detection (Chinese, Japanese, Korean and English by script rules done) |
+| 4 | Offline translation ✅ (Chinese to English first; other languages pending) |
+| 5 | Floating translation overlay ✅ (first version) |
 | 6 | Translation side panel |
 | 7 | Performance and compatibility |
 | 8 | Packaging and release |
@@ -201,6 +202,7 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Documentation
 
+- [Product and UI design specification](DESIGN.md) (the design target) and [implementation status](docs/IMPLEMENTATION-STATUS.md) (what exists and how it was verified)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Screen capture](docs/CAPTURE.md) and its [verification record / manual checklist](docs/CAPTURE-MANUAL-TESTS.md)
 - [IPC protocol](docs/IPC-PROTOCOL.md) · [Python engine compatibility](docs/research/PYTHON-ENGINE-COMPATIBILITY.md) · [Pipe ACL verification](docs/research/PIPE-ACL-VERIFICATION.md)
@@ -212,5 +214,6 @@ Details: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## License
 
-No distribution license has been selected yet; see [LICENSE-CHOICE.md](LICENSE-CHOICE.md).
-Until a license is chosen, all rights are reserved by the authors.
+GlyphLens is licensed under the [Apache License 2.0](LICENSE) (copyright notice in [NOTICE](NOTICE), third-party notices in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), reasoning in [LICENSE-CHOICE.md](LICENSE-CHOICE.md)). Model files are not part of the
+project and keep their own licences.

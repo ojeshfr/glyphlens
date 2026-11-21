@@ -14,7 +14,7 @@
 | `GlyphLens.Infrastructure.Tests` | xUnit | `tests/GlyphLens.Infrastructure.Tests` | IPC envelope serialization and validation, contract (model) JSON round-trips, Infrastructure dependency rules. |
 | `GlyphLens.Windows.Tests` | xUnit | `tests/GlyphLens.Windows.Tests` | Windows dependency rules, target-id parsing, row compaction, error mapping, service guard rails; Windows OCR engine tests (see "OCR tests"); worker pipe/launcher tests; plus **opt-in hardware tests** of real capture (see below). |
 | `GlyphLens.App.Tests` | xUnit | `tests/GlyphLens.App.Tests` | `CaptureViewModel`, `WorkerViewModel`, `OcrViewModel`, `OverlayState` and `AsyncRelayCommand` against fake services (no window is created). |
-| Worker tests | `unittest` | `worker/tests` | Package import, `--version`, `--health`, envelope validation and decoding. |
+| Worker tests | `unittest` | `worker/tests` | Envelope, framing, dispatcher, server; language identification (script rules, shaping, real backends when installed); translation service, registry and routes, validating importer (zip-slip, bombs, BPE refusal), segmentation incl. Chinese sentences, hallucination guard, contraction clean-up; `ocr.detect` with a fake recogniser; network guard; a real named-pipe session. 395 tests. Last run 2026-11-21: `worker\.venv` (Python 3.12.10, engines, real fr model and real OCR files) OK with 6 skipped; the CI command on a real Python 3.11.18 and on the system Python 3.12.10 (standard library only) OK with 26 skipped (the real-engine tests skip with a visible reason). |
 
 ## Running
 
@@ -75,6 +75,28 @@ What has actually been run, and what still needs a human with other hardware, is
   engine error), results cleared when capture stops, errors that never leak text, language selection, and Copy only on command.
 - Not covered by automated tests: non-English languages, rotated text, small or low-contrast text, and real application
   content. See [CAPTURE-MANUAL-TESTS.md](CAPTURE-MANUAL-TESTS.md) section 3b.
+
+## Translation, OCR and overlay tests
+
+- **.NET** (Core 479, Infrastructure 497, App 345, Windows 155 of which 7 hardware tests are skipped by design; counts of 2026-11-21): contracts, `TranslationPipeline` (detection, manual language, uncertainty,
+  missing model, cache, cancellation, one-at-a-time, grouping), region grouping geometry, `LruTranslationCache`, the worker clients
+  (strict response validation, chunking, error mapping), `WorkerOcrEngine`, `OcrEngineSelector`, `TranslationViewModel`,
+  `OverlayViewModel` (cards update in place, bounded, copy, modes, pause), `OverlayPlacement` (disconnected monitor, negative
+  coordinates, minimum/maximum size), the settings store, the hotkey service (conflicts) and real-worker integration
+  (`RealWorkerProtocolTests`, `WorkerLifecycleIntegrationTests`).
+- **Opt-in real-engine tests (Python)**: `GLYPHLENS_TEST_FR_EN_MODEL` (a real `.argosmodel`), `GLYPHLENS_TEST_OCR_MODELS_DIR` +
+  `GLYPHLENS_TEST_OCR_IMAGE` (real PP-OCRv5 files and a PNG). Without them these tests are **skipped with a visible reason**; CI runs the
+  model-independent tests only. No model is ever committed.
+- **Real-application scripts** (`eval/zh-en`, not run by CI because they need the interactive desktop, models and the mouse): the Chinese
+  end-to-end tests (Simplified 13/13, Traditional 13/13, multi-line messages 14/14, automatic OCR choice 12/12 in two scenarios, incremental OCR and resource measurements; all re-run on 2026-11-21 on the final build) and the overlay verification (35/35, re-run the same day, plus a control run that proves the
+  self-capture check can fail). See [research/CHINESE-FIRST-EVALUATION.md](research/CHINESE-FIRST-EVALUATION.md). They were run once
+  successfully on one machine (Windows 11 build 26200, one 2560x1600 display at 150 % scale); the first versions of the scripts
+  failed in several places that were script bugs, and mouse steps can be disturbed by a person using the mouse at the same time.
+  `drive-keyboard-e2e.ps1` (2026-11-21) checks accessible names, keyboard-only use of every page, all five global shortcuts pressed while another
+  application is in front, the overlay's "new results" button and scroll-following, and the minimum window sizes. Its keyboard, shortcut and
+  "new results" checks passed on the build before that day's layout fixes; at the minimum size it found real clipping on the Capture page and in the
+  overlay footer, which was fixed in XAML, and **the rerun on the fixed build has not been done yet** (see IMPLEMENTATION-STATUS.md, checkpoint 6).
+  **Not tested**: more than one monitor, mixed DPI, other DPI scales, real screen readers, Windows 10, other builds for the display-affinity call.
 
 ## Future test categories (planned)
 

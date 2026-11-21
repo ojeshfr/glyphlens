@@ -14,7 +14,7 @@
     <StackPanel>
         <Grid Margin="0,0,0,12">
             <TextBlock Text="Text recognition" Style="{StaticResource SectionTitle}" />
-            <TextBlock Text="Windows OCR · offline" Style="{StaticResource MutedText}" FontSize="11"
+            <TextBlock Text="offline" Style="{StaticResource MutedText}" FontSize="11"
                        HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
 
@@ -22,25 +22,49 @@
                   HorizontalAlignment="Stretch" Margin="0,0,0,10"
                   AutomationProperties.AutomationId="OcrLanguageSelector" AutomationProperties.Name="Recognition language" />
 
-        <Grid Margin="0,0,0,10">
+        <Border Visibility="{Binding HasEngineNotice, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,10">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource InfoBanner}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding EngineNoticeIsProblem}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource WarningSubtleBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <TextBlock Text="{Binding EngineNotice}" TextWrapping="Wrap" AutomationProperties.AutomationId="OcrEngineNotice" />
+                <Button Content="Open OCR folder" Command="{Binding OpenOcrFolderCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="12,4"
+                        Visibility="{Binding OffersOcrFolder, Converter={StaticResource BoolToVisibility}}"
+                        AutomationProperties.AutomationId="OpenOcrFolderButton" AutomationProperties.Name="Open the OCR models folder" />
+            </StackPanel>
+        </Border>
+
+        <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Read text" Command="{Binding ReadTextCommand}" Style="{StaticResource PrimaryButton}"
-                    HorizontalAlignment="Stretch" Padding="0,6" Margin="0,0,8,0"
+                    HorizontalAlignment="Stretch" Margin="0,0,8,0"
                     AutomationProperties.AutomationId="ReadTextButton" />
-            <ToggleButton Grid.Column="1" Content="Live" IsChecked="{Binding IsLive}" IsEnabled="{Binding IsCapturing}" Padding="16,6" Margin="0,0,8,0"
-                          AutomationProperties.AutomationId="LiveOcrToggle" AutomationProperties.Name="Live reading" />
-            <Button Grid.Column="2" Content="Copy" Command="{Binding CopyTextCommand}" Padding="14,6"
-                    AutomationProperties.AutomationId="CopyTextButton" />
+            <Button Grid.Column="1" Content="Copy" Command="{Binding CopyTextCommand}"
+                    AutomationProperties.AutomationId="CopyTextButton" AutomationProperties.Name="Copy the recognised text" />
         </Grid>
+
+        <ToggleButton IsChecked="{Binding IsLive}" IsEnabled="{Binding IsCapturing}" Style="{StaticResource Switch}" Margin="0,0,0,8"
+                      AutomationProperties.AutomationId="LiveOcrToggle" AutomationProperties.Name="Live reading">
+            <StackPanel>
+                <TextBlock Text="Live reading" />
+                <TextBlock Text="Read the screen again whenever it changes" Style="{StaticResource MutedText}" FontSize="{StaticResource LabelFontSize}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ToggleButton>
 
         <TextBlock Text="{Binding StatusText}" Style="{StaticResource MutedText}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
                    AutomationProperties.AutomationId="OcrStatusText" />
 
-        <ListBox ItemsSource="{Binding Lines}" MaxHeight="180" MinHeight="60" AutomationProperties.AutomationId="OcrLinesList">
+        <ListBox ItemsSource="{Binding Lines}" MaxHeight="180" MinHeight="60" AutomationProperties.AutomationId="OcrLinesList" AutomationProperties.Name="Recognised text">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Margin="0,2" AutomationProperties.Name="{Binding Text}">

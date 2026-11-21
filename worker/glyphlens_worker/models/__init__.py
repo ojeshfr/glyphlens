@@ -1,1 +1,1 @@
-"""Installed model metadata, provenance and integrity checks. Not implemented in Phase 0."""
+"""Installed translation packages: the manifest, the registry that scans the model directory and the validating importer."""

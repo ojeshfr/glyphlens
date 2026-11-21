@@ -8,14 +8,27 @@ dynamic = ["version"]
 description = "Local inference worker for GlyphLens: OCR, language identification and offline translation."
 readme = "README.md"
 requires-python = ">=3.11"
-# Intentionally empty for Phase 0. PaddleOCR and Argos Translate are deferred until their
-# combined Windows wheel compatibility is validated (see docs/decisions/ADR-0004-worker-communication.md).
+# Intentionally empty: the worker starts and serves its protocol with the standard library alone, and every engine
+# reports honestly when its library is missing. The engines are optional extras (below), installed into the worker's
+# environment. `argostranslate` is never a dependency (docs/decisions/ADR-0006-direct-argos-model-engine.md).
 dependencies = []
 classifiers = [
     "Private :: Do Not Upload",
     "Programming Language :: Python :: 3",
     "Operating System :: Microsoft :: Windows",
 ]
+
+[project.optional-dependencies]
+# Offline translation: Argos model packages run directly with CTranslate2 and SentencePiece (about 120 MB).
+translation = ["ctranslate2==4.9.0", "sentencepiece==0.2.3"]
+# Chinese-capable OCR: PaddleOCR's PP-OCRv5 pipeline on ONNX Runtime (the paddlepaddle wheel is not needed). The model
+# files are placed by the user in <models>/ocr (see worker/README.md); nothing is downloaded at run time.
+ocr = ["paddleocr==3.7.0", "onnxruntime>=1.20"]
+# Language identification. Chinese, Japanese, Korean and plain English are recognised by built-in script rules without any
+# library. Lingua adds the other languages and is the most accurate but needs Python 3.12 or newer (about 290 MB).
+lingua = ["lingua-language-detector==2.2.0; python_version >= '3.12'"]
+# Language identification fallback for Python 3.11 (about 5 MB, less accurate on single words).
+langid = ["py3langid==0.4.0"]
 
 [project.scripts]
 glyphlens-worker = "glyphlens_worker.main:main"

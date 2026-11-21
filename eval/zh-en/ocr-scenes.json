@@ -1,0 +1,87 @@
+{
+  "description": "Layouts of the Chinese test windows used for the OCR benchmark and the end-to-end test. Texts come from dataset.json (by ref) or are written here. Sizes are in physical pixels.",
+  "scenes": [
+    {"name": "chat-light", "category": "chat, normal size, light", "w": 560, "h": 640, "bg": {"c1": "#EDEDED"}, "font": "Microsoft YaHei UI", "px": 22, "fg": "#111111", "margin": 18, "gap": 14,
+     "items": [
+       {"ref": "conv-01", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "chat-01", "align": "right", "bubble": "#95EC69"},
+       {"ref": "conv-02", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "chat-03", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "conv-05", "align": "right", "bubble": "#95EC69"},
+       {"ref": "chat-07", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "q-01", "align": "right", "bubble": "#95EC69"}
+     ]},
+    {"name": "chat-dark-small", "category": "chat, small text, dark", "w": 520, "h": 420, "bg": {"c1": "#1E1E1E"}, "font": "Microsoft YaHei UI", "px": 15, "fg": "#E8E8E8", "margin": 14, "gap": 10,
+     "items": [
+       {"ref": "conv-06", "align": "left", "bubble": "#3A3A3C"},
+       {"ref": "conv-07", "align": "right", "bubble": "#0A5C36"},
+       {"ref": "inf-04", "align": "left", "bubble": "#3A3A3C"},
+       {"ref": "chat-08", "align": "right", "bubble": "#0A5C36"},
+       {"ref": "q-03", "align": "left", "bubble": "#3A3A3C"},
+       {"ref": "sar-02", "align": "right", "bubble": "#0A5C36"}
+     ]},
+    {"name": "settings-ui", "category": "interface text, small, SimSun", "w": 460, "h": 360, "bg": {"c1": "#F0F0F0"}, "font": "SimSun", "px": 13, "fg": "#000000", "margin": 20, "gap": 14,
+     "items": [
+       {"ref": "ui-01", "px": 18, "bold": true},
+       {"ref": "ui-06", "bubble": "#E1E1E1"},
+       {"ref": "ui-05", "bubble": "#E1E1E1"},
+       {"ref": "ui-02", "bubble": "#E1E1E1"},
+       {"ref": "ui-03"},
+       {"ref": "ui-04"}
+     ]},
+    {"name": "mixed-latin", "category": "Chinese mixed with English, numbers, usernames", "w": 760, "h": 560, "bg": {"c1": "#FFFFFF"}, "font": "Microsoft YaHei UI", "px": 20, "fg": "#1A1A1A", "margin": 20, "gap": 18,
+     "items": [
+       {"ref": "mix-01"}, {"ref": "mix-02"}, {"ref": "mix-03"}, {"ref": "mix-04"}, {"ref": "num-01"}, {"ref": "num-02"}, {"ref": "num-03"}, {"ref": "num-04"}
+     ]},
+    {"name": "traditional-chat", "category": "Traditional Chinese chat", "script": "zt", "w": 560, "h": 560, "bg": {"c1": "#F4F4F4"}, "font": "Microsoft JhengHei UI", "px": 22, "fg": "#111111", "margin": 18, "gap": 14,
+     "items": [
+       {"ref": "conv-01", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "conv-04", "align": "right", "bubble": "#CDEBFF"},
+       {"ref": "conv-05", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "q-02", "align": "right", "bubble": "#CDEBFF"},
+       {"ref": "ui-03", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "ui-04", "align": "right", "bubble": "#CDEBFF"}
+     ]},
+    {"name": "document-paragraphs", "category": "multi-line paragraphs", "w": 760, "h": 420, "bg": {"c1": "#FFFFFF"}, "font": "Microsoft YaHei UI", "px": 20, "fg": "#222222", "margin": 24, "gap": 22,
+     "items": [
+       {"lines": ["随着人工智能技术的快速发展，越来越多的企业开始将其应用到日常", "工作中。这不仅提高了工作效率，也带来了新的挑战，例如数据安全和", "隐私保护问题。因此，企业在使用这些技术的同时，必须建立完善的管", "理制度。"]},
+       {"lines": ["昨天我和朋友去了新开的那家咖啡店。店里的环境很安静，咖啡也很香，", "只是座位不太多，我们等了二十分钟才找到位置。下次我打算早点去。"]}
+     ]},
+    {"name": "gradient-background", "category": "text over gradient background", "w": 700, "h": 360, "bg": {"c1": "#1E3C72", "c2": "#2A9DF4"}, "font": "Microsoft YaHei UI", "px": 26, "fg": "#FFFFFF", "margin": 28, "gap": 26,
+     "items": [
+       {"ref": "idiom-04", "bold": true}, {"ref": "inf-05"}, {"ref": "slang-04"}, {"ref": "chat-05"}
+     ]},
+    {"name": "font-sizes", "category": "one sentence at several sizes", "w": 700, "h": 400, "bg": {"c1": "#FFFFFF"}, "font": "Microsoft YaHei UI", "px": 12, "fg": "#000000", "margin": 16, "gap": 12,
+     "items": [
+       {"text": "我们今天去公园走走吧", "px": 12}, {"text": "我们今天去公园走走吧", "px": 14}, {"text": "我们今天去公园走走吧", "px": 18},
+       {"text": "我们今天去公园走走吧", "px": 24}, {"text": "我们今天去公园走走吧", "px": 36}
+     ]},
+    {"name": "vertical-text", "category": "vertical writing (one column)", "w": 200, "h": 360, "bg": {"c1": "#FFFFFF"}, "font": "Microsoft YaHei UI", "px": 28, "fg": "#000000", "margin": 20, "gap": 10,
+     "items": [ {"text": "你好世界今天很好", "vertical": true, "x": 80} ]},
+    {"name": "serif-emoji", "category": "SimSun serif with emoji and punctuation", "w": 640, "h": 300, "bg": {"c1": "#FAF6EE"}, "font": "SimSun", "px": 22, "fg": "#2B2B2B", "margin": 20, "gap": 16,
+     "items": [
+       {"text": "「你好！」他说：“今天天气不错，对吧？”"}, {"text": "价格：￥128.50（含税），共 3 件。"}, {"text": "晚上八点见，别迟到哦 😊"}
+     ]},
+    {"name": "chat-multiline", "category": "chat with multi-line (wrapped) messages next to single-line ones", "w": 560, "h": 640, "bg": {"c1": "#EDEDED"}, "font": "Microsoft YaHei UI", "px": 22, "fg": "#111111", "margin": 18, "gap": 14,
+     "items": [
+       {"lines": ["我刚刚下班了，现在在地铁上，", "大概还有二十分钟就到你那里了，", "你想吃什么我可以顺便买。"], "align": "left", "bubble": "#FFFFFF"},
+       {"lines": ["不用买了，我已经做好晚饭了，", "你直接回来吃就行。"], "align": "right", "bubble": "#95EC69"},
+       {"lines": ["好的，马上到。"], "align": "left", "bubble": "#FFFFFF"},
+       {"lines": ["对了，明天的会议改到下午三点了，", "请你提前把报告发给大家。"], "align": "left", "bubble": "#FFFFFF"}
+     ]},
+    {"name": "chat-progressive", "category": "chat window that receives new messages (shown with -ProgressiveSeconds)", "w": 560, "h": 1000, "bg": {"c1": "#EDEDED"}, "font": "Microsoft YaHei UI", "px": 22, "fg": "#111111", "margin": 18, "gap": 14,
+     "items": [
+       {"ref": "conv-01", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "chat-01", "align": "right", "bubble": "#95EC69"},
+       {"ref": "conv-02", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "chat-03", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "conv-05", "align": "right", "bubble": "#95EC69"},
+       {"ref": "chat-07", "align": "left", "bubble": "#FFFFFF"},
+       {"ref": "q-01", "align": "right", "bubble": "#95EC69"},
+       {"lines": ["我刚刚下班了，现在在地铁上，", "大概还有二十分钟就到你那里了，", "你想吃什么我可以顺便买。"], "align": "left", "bubble": "#FFFFFF"},
+       {"lines": ["不用买了，我已经做好晚饭了，", "你直接回来吃就行。"], "align": "right", "bubble": "#95EC69"},
+       {"lines": ["好的，马上到。"], "align": "left", "bubble": "#FFFFFF"},
+       {"lines": ["对了，明天的会议改到下午三点了，", "请你提前把报告发给大家。"], "align": "left", "bubble": "#FFFFFF"}
+     ]}
+  ]
+}

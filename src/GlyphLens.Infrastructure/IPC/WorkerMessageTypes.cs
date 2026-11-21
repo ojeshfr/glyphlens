@@ -17,6 +17,8 @@ public static class WorkerMessageTypes
     public const string TranslationCancel = "translation.cancel";
     public const string ModelsList = "models.list";
     public const string ModelsStatus = "models.status";
+    public const string ModelsInstall = "models.install";
+    public const string LanguageDetect = "language.detect";
 
     public const string Error = "error";
     public const string ResultSuffix = ".result";
@@ -32,5 +34,7 @@ public static class WorkerMessageTypes
         TranslationCancel,
         ModelsList,
         ModelsStatus,
+        ModelsInstall,
+        LanguageDetect,
     };
 }

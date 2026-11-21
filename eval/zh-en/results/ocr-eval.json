@@ -1,0 +1,180 @@
+{
+ "python": "3.12.10",
+ "engines": {
+  "mobile": {
+   "models": [
+    "PP-OCRv5_mobile_det",
+    "PP-OCRv5_mobile_rec"
+   ],
+   "init_s": 9.0,
+   "scenes": {
+    "chat-light": {
+     "cer": 0.0244,
+     "line_recall": 0.857,
+     "truth_chars": 82,
+     "predicted_lines": [
+      "你今天晚上有空吗？我们一起去吃饭吧。",
+      "好的",
+      "我刚下班，现在在地铁上，大概二十分钟后到。",
+      "在吗?",
+      "这家餐厅的菜很好吃，就是价格有点贵。",
+      "哈哈哈，太搞笑了",
+      "请问最近的地铁站怎么走?"
+     ],
+     "mean_recognition_score": 0.982,
+     "category": "chat, normal size, light",
+     "script": "zh",
+     "median_ms": 839.5
+    },
+    "chat-dark-small": {
+     "cer": 0.0641,
+     "line_recall": 0.833,
+     "truth_chars": 78,
+     "predicted_lines": [
+      "我已经把文件发到你的邮箱了，请查收",
+      "周末天气不错，我们去公园走走吧",
+      "这手机太卡了，该换了。",
+      "你吃饭了吗?",
+      "这个周末你打算做什么?",
+      "太好了，又下雨了，我正好没带伞"
+     ],
+     "mean_recognition_score": 0.982,
+     "category": "chat, small text, dark",
+     "script": "zh",
+     "median_ms": 742.8
+    },
+    "settings-ui": {
+     "cer": 0.0,
+     "line_recall": 1.0,
+     "truth_chars": 48,
+     "predicted_lines": [
+      "设置",
+      "登录",
+      "搜索",
+      "保存并退出",
+      "您确定要删除这个文件吗？此操作无法撤销。",
+      "网络连接失败，请检查您的网络设置。"
+     ],
+     "mean_recognition_score": 0.995,
+     "category": "interface text, small, SimSun",
+     "script": "zh",
+     "median_ms": 635.3
+    },
+    "mixed-latin": {
+     "cer": 0.0051,
+     "line_recall": 1.0,
+     "truth_chars": 196,
+     "predicted_lines": [
+      "我昨天在Amazon上买了一部iPhone 15Pro。",
+      "请把 PPT发给我，明天的meeting要用。",
+      "这个 bug 还没修复，我们需要重新部署服务器。",
+      "微信支付失败了，试试用Alipay吧。",
+      "订单号20240315-8842已于下午3:45发货，预计3月18日送达。",
+      "张伟说他的电话是138-0013-8000，让你回电话。",
+      "本次活动的总预算为￥12,500，已使用60%。",
+      "@小明你的快递到了，请到前台领取。"
+     ],
+     "mean_recognition_score": 0.985,
+     "category": "Chinese mixed with English, numbers, usernames",
+     "script": "zh",
+     "median_ms": 1132.4
+    },
+    "traditional-chat": {
+     "cer": 0.0,
+     "line_recall": 1.0,
+     "truth_chars": 105,
+     "predicted_lines": [
+      "你今天晚上有空嗎？我們一起去吃飯吧。",
+      "謝謝你的幫助，真的非常感謝！",
+      "這家餐廳的菜很好吃，就是價格有點貴。",
+      "你能幫我看一下這個文件有沒有問題嗎？",
+      "您確定要刪除這個檔案嗎？此操作無法復原。",
+      "網路連線失敗，請檢查您的網路設定。"
+     ],
+     "mean_recognition_score": 0.992,
+     "category": "Traditional Chinese chat",
+     "script": "zt",
+     "median_ms": 934.2
+    },
+    "document-paragraphs": {
+     "cer": 0.0063,
+     "line_recall": 1.0,
+     "truth_chars": 159,
+     "predicted_lines": [
+      "随着人工智能技术的快速发展，越来越多的企业开始将其应用到日常",
+      "工作中。这不仅提高了工作效率，也带来了新的挑战，例如数据安全和",
+      "隐私保护问题。因此，企业在使用这些技术的同时，必须建立完善的管",
+      "理制度。",
+      "昨天我和朋友去了新开的那家咖啡店。店里的环境很安静，咖啡也很香，",
+      "只是座位不太多，我门等了二十分钟才找到位置。下次我打算早点去。"
+     ],
+     "mean_recognition_score": 0.993,
+     "category": "multi-line paragraphs",
+     "script": "zh",
+     "median_ms": 1347.8
+    },
+    "gradient-background": {
+     "cer": 0.0,
+     "line_recall": 1.0,
+     "truth_chars": 41,
+     "predicted_lines": [
+      "万事开头难，坚持下去就会好的。",
+      "别装了，我早就看出来了。",
+      "别躺平了，起来干活吧。",
+      "马上到"
+     ],
+     "mean_recognition_score": 0.992,
+     "category": "text over gradient background",
+     "script": "zh",
+     "median_ms": 410.2
+    },
+    "font-sizes": {
+     "cer": 0.0,
+     "line_recall": 1.0,
+     "truth_chars": 50,
+     "predicted_lines": [
+      "我们今天去公园走走吧",
+      "我们今天去公园走走吧",
+      "我们今天去公园走走吧",
+      "我们今天去公园走走吧",
+      "我们今天去公园走走吧"
+     ],
+     "mean_recognition_score": 0.997,
+     "category": "one sentence at several sizes",
+     "script": "zh",
+     "median_ms": 406.0
+    },
+    "vertical-text": {
+     "cer": 0.0,
+     "line_recall": 1.0,
+     "truth_chars": 8,
+     "predicted_lines": [
+      "你好世界今天很好"
+     ],
+     "mean_recognition_score": 0.998,
+     "category": "vertical writing (one column)",
+     "script": "zh",
+     "median_ms": 85.7
+    },
+    "serif-emoji": {
+     "cer": 0.02,
+     "line_recall": 1.0,
+     "truth_chars": 50,
+     "predicted_lines": [
+      "「你好！」他说：“今天天气不错，对吧？”",
+      "价格：￥128.50（含税），共3件。",
+      "晚上八点见，别迟到哦"
+     ],
+     "mean_recognition_score": 0.995,
+     "category": "SimSun serif with emoji and punctuation",
+     "script": "zh",
+     "median_ms": 341.3
+    }
+   },
+   "overall_cer_weighted": 0.0122,
+   "median_ms_per_image": 689.0,
+   "memory_mb_after": 776.0,
+   "memory_mb_growth": 758.6
+  }
+ }
+}

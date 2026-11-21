@@ -32,6 +32,9 @@ public enum WorkerComponentState
     /// <summary>The component is implemented but its models are not installed.</summary>
     NotInstalled,
 
+    /// <summary>Models are installed.</summary>
+    Installed,
+
     /// <summary>The component failed to load.</summary>
     Unavailable,
 }
@@ -48,6 +51,7 @@ public static class WorkerComponentStateExtensions
         WorkerComponentState.NotInitialized => "not_initialized",
         WorkerComponentState.NotImplemented => "not_implemented",
         WorkerComponentState.NotInstalled => "not_installed",
+        WorkerComponentState.Installed => "installed",
         WorkerComponentState.Unavailable => "unavailable",
         _ => "unknown",
     };
@@ -66,6 +70,7 @@ public static class WorkerComponentStateExtensions
         "not_initialized" => WorkerComponentState.NotInitialized,
         "not_implemented" => WorkerComponentState.NotImplemented,
         "not_installed" => WorkerComponentState.NotInstalled,
+        "installed" => WorkerComponentState.Installed,
         "unavailable" => WorkerComponentState.Unavailable,
         _ => WorkerComponentState.Unknown,
     };

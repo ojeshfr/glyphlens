@@ -1,0 +1,124 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        The LIGHT colour palette (DESIGN.md, "Colour tokens"). Palette.Light.xaml and Palette.Dark.xaml are the ONLY files
+        with literal colour values and define exactly the same keys; the app swaps one for the other at run time, so every view
+        refers to the brushes with DynamicResource. Tests enforce all three rules and the contrast of the text pairs.
+    -->
+
+    <!-- Main application background -->
+    <Color x:Key="WindowBackgroundColor">#F5F5F7</Color>
+    <!-- Sections and content surfaces -->
+    <Color x:Key="SurfaceColor">#FFFFFF</Color>
+    <!-- Subtle inner surfaces -->
+    <Color x:Key="SurfaceSecondaryColor">#F9F9FB</Color>
+    <!-- Main text -->
+    <Color x:Key="TextPrimaryColor">#1D1D1F</Color>
+    <!-- Supporting labels (AA on every background used) -->
+    <Color x:Key="TextSecondaryColor">#636366</Color>
+    <!-- Tertiary, non-essential information only (below AA) -->
+    <Color x:Key="TextMutedColor">#86868B</Color>
+    <!-- Hairlines and section edges -->
+    <Color x:Key="BorderSubtleColor">#E5E5EA</Color>
+    <!-- Fills: primary buttons, selection, switches (white text on it) -->
+    <Color x:Key="AccentColor">#0066CC</Color>
+    <!-- Hover / pressed fill -->
+    <Color x:Key="AccentHoverColor">#0055B3</Color>
+    <!-- Accent as text, icons and the focus ring (readable on the surfaces) -->
+    <Color x:Key="AccentTextColor">#0066CC</Color>
+    <!-- Ready / connected -->
+    <Color x:Key="SuccessColor">#248A3D</Color>
+    <!-- Attention required -->
+    <Color x:Key="WarningColor">#C93400</Color>
+    <!-- Errors and failures -->
+    <Color x:Key="ErrorColor">#D70015</Color>
+    <!-- Text on Accent -->
+    <Color x:Key="OnAccentColor">#FFFFFF</Color>
+    <!-- Symbols on Success / Warning / Error badges -->
+    <Color x:Key="OnStatusColor">#FFFFFF</Color>
+    <!-- Warning text -->
+    <Color x:Key="WarningTextColor">#A62C00</Color>
+    <!-- Error text -->
+    <Color x:Key="ErrorTextColor">#B8000F</Color>
+    <!-- Tinted background (information notices) -->
+    <Color x:Key="AccentSubtleColor">#E8F1FC</Color>
+    <!-- Tinted background (warnings) -->
+    <Color x:Key="WarningSubtleColor">#FFF4E8</Color>
+    <!-- Tinted background (errors) -->
+    <Color x:Key="ErrorSubtleColor">#FFF0F1</Color>
+    <!-- Hover on a surface -->
+    <Color x:Key="SurfaceHoverColor">#F2F2F7</Color>
+    <!-- Pressed on a surface -->
+    <Color x:Key="SurfacePressedColor">#E5E5EA</Color>
+    <!-- Stronger edges (slider knob) -->
+    <Color x:Key="BorderStrongColor">#D2D2D7</Color>
+    <!-- Behind the capture preview -->
+    <Color x:Key="PreviewBackdropColor">#1D1D1F</Color>
+    <!-- The sidebar -->
+    <Color x:Key="SidebarBackgroundColor">#EDEDF0</Color>
+    <!-- Hover in the sidebar -->
+    <Color x:Key="SidebarHoverColor">#E1E1E6</Color>
+    <!-- Grey buttons and the segmented track -->
+    <Color x:Key="ControlFillColor">#E8E8ED</Color>
+    <!-- Hover on grey controls -->
+    <Color x:Key="ControlFillHoverColor">#DDDDE3</Color>
+    <!-- Pressed grey controls; the inactive sidebar selection -->
+    <Color x:Key="ControlFillPressedColor">#D2D2D7</Color>
+    <!-- A switch that is off -->
+    <Color x:Key="SwitchOffColor">#D9D9DE</Color>
+    <!-- The overlay panel (slightly translucent) -->
+    <Color x:Key="OverlaySurfaceColor">#F7FFFFFF</Color>
+    <!-- A translation bubble in the overlay -->
+    <Color x:Key="OverlayBubbleColor">#F2F2F7</Color>
+    <!-- The chosen segment of a segmented control -->
+    <Color x:Key="SegmentSelectedColor">#FFFFFF</Color>
+    <!-- The knob of a switch or a slider -->
+    <Color x:Key="KnobColor">#FFFFFF</Color>
+    <Color x:Key="ShadowColor">#000000</Color>
+
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
+    <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="{StaticResource SurfaceSecondaryColor}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource BorderSubtleColor}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}" />
+    <SolidColorBrush x:Key="AccentTextBrush" Color="{StaticResource AccentTextColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    <SolidColorBrush x:Key="OnAccentBrush" Color="{StaticResource OnAccentColor}" />
+    <SolidColorBrush x:Key="OnStatusBrush" Color="{StaticResource OnStatusColor}" />
+    <SolidColorBrush x:Key="WarningTextBrush" Color="{StaticResource WarningTextColor}" />
+    <SolidColorBrush x:Key="ErrorTextBrush" Color="{StaticResource ErrorTextColor}" />
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource AccentSubtleColor}" />
+    <SolidColorBrush x:Key="WarningSubtleBrush" Color="{StaticResource WarningSubtleColor}" />
+    <SolidColorBrush x:Key="ErrorSubtleBrush" Color="{StaticResource ErrorSubtleColor}" />
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource SurfaceHoverColor}" />
+    <SolidColorBrush x:Key="SurfacePressedBrush" Color="{StaticResource SurfacePressedColor}" />
+    <SolidColorBrush x:Key="BorderStrongBrush" Color="{StaticResource BorderStrongColor}" />
+    <SolidColorBrush x:Key="PreviewBackdropBrush" Color="{StaticResource PreviewBackdropColor}" />
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="{StaticResource SidebarBackgroundColor}" />
+    <SolidColorBrush x:Key="SidebarHoverBrush" Color="{StaticResource SidebarHoverColor}" />
+    <SolidColorBrush x:Key="ControlFillBrush" Color="{StaticResource ControlFillColor}" />
+    <SolidColorBrush x:Key="ControlFillHoverBrush" Color="{StaticResource ControlFillHoverColor}" />
+    <SolidColorBrush x:Key="ControlFillPressedBrush" Color="{StaticResource ControlFillPressedColor}" />
+    <SolidColorBrush x:Key="SwitchOffBrush" Color="{StaticResource SwitchOffColor}" />
+    <SolidColorBrush x:Key="OverlaySurfaceBrush" Color="{StaticResource OverlaySurfaceColor}" />
+    <SolidColorBrush x:Key="OverlayBubbleBrush" Color="{StaticResource OverlayBubbleColor}" />
+    <SolidColorBrush x:Key="SegmentSelectedBrush" Color="{StaticResource SegmentSelectedColor}" />
+    <SolidColorBrush x:Key="KnobBrush" Color="{StaticResource KnobColor}" />
+    <SolidColorBrush x:Key="ShadowSoftBrush" Color="{StaticResource ShadowColor}" Opacity="0.12" />
+
+    <!-- The Fluent theme otherwise takes its accent from the Windows accent colour (any colour the user picked): use ours. -->
+    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="{StaticResource AccentHoverColor}" />
+    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="{StaticResource AccentHoverColor}" />
+    <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="{StaticResource AccentTextColor}" />
+    <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="{StaticResource AccentTextColor}" />
+    <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush" Color="{StaticResource AccentTextColor}" />
+</ResourceDictionary>

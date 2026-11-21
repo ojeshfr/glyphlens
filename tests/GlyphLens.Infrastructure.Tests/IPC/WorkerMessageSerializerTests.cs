@@ -182,7 +182,8 @@ public class WorkerMessageSerializerTests
         string[] documented =
         [
             "worker.initialize", "worker.health", "worker.shutdown", "ocr.detect",
-            "translation.translate", "translation.cancel", "models.list", "models.status",
+            "translation.translate", "translation.cancel", "models.list", "models.status", "models.install",
+            "language.detect",
         ];
 
         Assert.Equal(documented.Order(StringComparer.Ordinal), WorkerMessageTypes.Requests.Order(StringComparer.Ordinal));

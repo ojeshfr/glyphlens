@@ -3,16 +3,22 @@
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import io
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
+import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import glyphlens_worker
 from glyphlens_worker import main as worker_main
+from glyphlens_worker.config.settings import MODELS_DIR_ENVIRONMENT_VARIABLE
 
 WORKER_ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,10 +35,23 @@ class PackageTests(unittest.TestCase):
         import glyphlens_worker.engines.ocr  # noqa: F401
         import glyphlens_worker.engines.translation  # noqa: F401
 
-    def test_pyproject_has_no_runtime_dependencies_yet(self) -> None:
-        # Phase 0 must not pull in OCR or translation frameworks.
+    def test_pyproject_has_no_base_dependencies_and_pins_the_engine_extras(self) -> None:
+        # The worker must start with the standard library alone; engines are optional extras (exact versions, except the ONNX Runtime lower bound).
         text = (WORKER_ROOT / "pyproject.toml").read_text(encoding="utf-8")
         self.assertRegex(text, r"(?m)^dependencies = \[\]$")
+
+        project = tomllib.loads(text)["project"]
+        self.assertEqual(
+            project["optional-dependencies"],
+            {
+                "translation": ["ctranslate2==4.9.0", "sentencepiece==0.2.3"],
+                "ocr": ["paddleocr==3.7.0", "onnxruntime>=1.20"],
+                "lingua": ["lingua-language-detector==2.2.0; python_version >= '3.12'"],
+                "langid": ["py3langid==0.4.0"],
+            },
+        )
+        requirements = [requirement for group in project["optional-dependencies"].values() for requirement in group]
+        self.assertFalse([requirement for requirement in requirements if "argos" in requirement.lower()])  # never a dependency
 
 
 class CliTests(unittest.TestCase):
@@ -58,18 +77,35 @@ class CliTests(unittest.TestCase):
         self.assertEqual(report["workerVersion"], glyphlens_worker.__version__)
         self.assertEqual(report["protocolVersion"], glyphlens_worker.PROTOCOL_VERSION)
 
-    def test_standalone_health_reports_a_running_but_unconnected_worker_with_no_engines(self) -> None:
-        report = worker_main.health_report()
+    def test_standalone_health_reports_a_running_but_unconnected_worker_without_any_ready_engine(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, mock.patch.dict(
+            os.environ, {MODELS_DIR_ENVIRONMENT_VARIABLE: str(Path(temp) / "no-models-here")}
+        ):
+            report = worker_main.health_report()
 
+        runtime_present = all(importlib.util.find_spec(name) is not None for name in ("ctranslate2", "sentencepiece"))
         self.assertEqual(report["process"], "ready")
         self.assertEqual(report["ipc"], "disconnected")
         self.assertEqual(report["protocol"], "not_initialized")
-        self.assertEqual(
-            report["engines"],
-            {"ocr": "not_implemented", "languageDetection": "not_implemented",
-             "translation": "not_implemented"},
-        )
+        self.assertIn(report["engines"]["ocr"], {"unavailable", "not_installed", "installed"})
+        self.assertIn(report["engines"]["languageDetection"], {"unavailable", "installed"})
+        self.assertEqual(report["engines"]["translation"], "not_installed" if runtime_present else "unavailable")
+        self.assertNotIn("ready", report["engines"].values())
         self.assertEqual(report["models"], "not_installed")
+
+    def test_standalone_health_imports_no_engine_library(self) -> None:
+        code = (
+            "import sys; from glyphlens_worker.main import health_report; health_report(); "
+            "heavy = [m for m in ('ctranslate2', 'sentencepiece', 'lingua', 'py3langid', 'numpy', 'argostranslate') if m in sys.modules]; "
+            "print(heavy)"
+        )
+
+        completed = subprocess.run(
+            [sys.executable, "-c", code], cwd=WORKER_ROOT, capture_output=True, text=True, timeout=60, check=False
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.strip(), "[]")
 
     def test_requires_exactly_one_option(self) -> None:
         for argv in ([], ["--version", "--health"]):

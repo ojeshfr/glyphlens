@@ -95,11 +95,166 @@ Each field is a separate fact: a live worker never marks an engine ready. The ap
 
 Request payload `null`. Result `{ "status": "stopping" }`, then the worker exits with code 0.
 
-### Not implemented
+### Translation and language identification (protocol 1.0, frozen for the translation MVP)
 
-`ocr.detect`, `translation.translate`, `translation.cancel`, `models.list`, `models.status` are known types and receive
-`error` / `engine_unavailable`. Any other type receives `unknown_message_type`. Cancellation semantics for engine requests are
-therefore not yet exercised.
+Everything below is local. The worker makes **no network request** while handling these messages; model installation reads a
+file the user chose and never downloads one. The worker also installs a fail-closed guard at start-up that makes Python-level
+socket connects and name lookups raise (it cannot see native code; see [research/TRANSLATION-COMPATIBILITY.md](research/TRANSLATION-COMPATIBILITY.md)).
+Request and result payloads are private screen content: they are never logged, and error messages never repeat them.
+
+**Engines.** Translation runs Argos *model packages* directly with CTranslate2 and SentencePiece; the `argostranslate` library is
+deliberately not used (its first translation contacts GitHub, and it needs about 1 GB of dependencies; see
+[ADR-0006](decisions/ADR-0006-direct-argos-model-engine.md)). Language identification decides Chinese (Simplified or Traditional), Japanese, Korean and plain English by script rules without any library;
+Lingua (Python 3.12+) or py3langid is used for other languages when installed.
+
+**Common limits** (the worker enforces them; the application stays inside them):
+
+| Limit | Value |
+|---|---|
+| Texts per `language.detect` | 64 |
+| Items per `translation.translate` | 32 (the application sends at most 8 at a time) |
+| Characters per text | 4096 for both messages (Python code points; the application counts UTF-16 units, which are never fewer, so a text that passes the application's check passes the worker's) |
+| Item `id` | 1-64 characters, unique within the request, echoed back |
+| Language codes | lowercase, `^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$`; the worker uses the two-letter form Argos uses (`de`, `zh`) |
+
+**Component states** reported by `worker.health` / `worker.initialize` for the new engines (wire values lower snake case):
+
+| Field | Value | Meaning |
+|---|---|---|
+| `engines.languageDetection` | `installed` | always available: the script rules (Chinese, Japanese, Korean, plain English) need no library; Lingua or py3langid adds other languages when installed |
+| | `ready` | has answered a request |
+| `engines.translation` | `unavailable` | the translation runtime (CTranslate2 and SentencePiece) is missing or failed to load |
+| | `not_installed` | the runtime is present but no translation package is installed |
+| | `installed` | at least one package is installed; no translation has loaded a model yet |
+| | `ready` | the runtime loaded and a package was listed or used successfully |
+| `engines.ocr` | `unavailable` / `not_installed` / `installed` / `ready` | OCR runtime missing or failed / runtime present but the PP-OCRv5 files are missing / files present / has recognised a frame |
+| `models` | `not_installed` / `installed` / `unavailable` | whether any package is installed (`unavailable` = the storage could not be read) |
+
+Health never imports a heavy library: it uses cheap checks (`importlib.util.find_spec`, a directory scan) plus what earlier
+requests already learned. The application "warms up" the engines by sending `models.list` after the worker starts.
+
+#### `language.detect`
+
+```json
+// request
+{ "texts": ["Hallo Welt", "..."], "maxAlternatives": 3 }
+// result: one entry per text, same order
+{ "detector": "script+lingua 2.2.0",
+  "results": [ { "language": "de", "confidence": 0.98,
+                 "alternatives": [ { "language": "nl", "confidence": 0.01 } ], "issue": "none" },
+               { "language": null, "confidence": null, "alternatives": [], "issue": "too_short" } ] }
+```
+
+`maxAlternatives` is optional (0-5, default 3). `issue` is `none`, `too_short` (fewer than 3 letters; one CJK character is a whole word and is identified), `no_text` (no letters) or
+`unknown` (the detector had no answer). `confidence` is the library's own probability, or `null` when it reports none; the worker
+never invents one. The worker does not decide what is "confident enough": the application applies its threshold and lets the
+user override the language.
+
+#### `translation.translate`
+
+```json
+// request: sourceLanguage is required per item (the application detects or the user chooses first)
+{ "targetLanguage": "en", "items": [ { "id": "r1", "text": "Hallo Welt", "sourceLanguage": "de" } ] }
+// result: one entry per item, same order; one failing item does not fail the others
+{ "engine": "ct2-4.9.0",
+  "results": [
+    { "id": "r1", "status": "ok", "translatedText": "Hello world", "sourceLanguage": "de", "targetLanguage": "en",
+      "modelVersion": "ct2-4.9.0/seg4|argos:de-en:1.9:12f4dd41956b", "route": ["de", "en"] },
+    { "id": "r2", "status": "error",
+      "error": { "code": "model_missing", "message": "No installed model translates ja to en.", "requiredPackage": "translate-ja_en" } } ] }
+```
+
+`modelVersion` is an opaque string identifying the engine revision and the installed package(s) used: per hop
+`argos:<from>-<to>:<package_version>:<first 12 hex of sha256(model.bin)>`, hops joined with `>` for a pivot route, prefixed by the
+engine tag (`ct2-<ctranslate2 version>/seg<splitter revision>|`). It changes when a package is installed, replaced or re-imported
+(even with the same package version) and is part of the application's cache key. The application never parses it. Item error codes: `model_missing`,
+`unsupported_language_pair`, `same_language`, `empty_text`, `text_too_long`, `translation_failed`. Request-level failures use the
+`error` message: `invalid_request` (shape, limits, duplicate ids), `engine_unavailable` (library missing or failed to load).
+
+**Cancellation.** The worker handles one request at a time over a blocking pipe, so it cannot read `translation.cancel` while it is
+translating. The application therefore cancels by (a) keeping batches small (at most 8 items, so a stale request finishes in about a
+second), (b) abandoning the wait and discarding the stale result, and (c) never having more than one translation request in flight.
+`translation.cancel` stays reserved (answered `engine_unavailable`).
+
+#### `models.list`
+
+Request payload `null` or `{}`. Loads the engine if needed (may take seconds on first use).
+
+```json
+{ "engine": "ct2-argos", "engineVersion": "4.9.0", "state": "installed",
+  "storagePath": "C:\\Users\\me\\AppData\\Local\\GlyphLens\\models",
+  "packages": [ { "from": "de", "to": "en", "fromName": "German", "toName": "English", "version": "1.9", "packageName": "translate-de_en" } ],
+  "problems": [] }
+```
+
+`state` is `unavailable` (with `problems` explaining why), `not_installed` or `installed`.
+
+#### `models.status`
+
+Request `{ "source": "de", "target": "en" }`. Result:
+
+```json
+{ "source": "de", "target": "en", "available": true, "route": ["de", "en"], "modelVersion": "ct2-4.9.0/seg4|argos:de-en:1.9:12f4dd41956b",
+  "missingPackage": null, "issue": "none" }
+```
+
+`route` lists the languages the translation passes through. The worker prefers a direct package, otherwise the shortest path over
+the installed packages (at most 2 hops, so `de -> en -> fr` works when both packages are installed; a longer route is not offered). When not available, `issue` is
+`model_missing` (with the conventional `missingPackage`, for example `translate-ja_en`), `unsupported_pair` (a language the engine
+does not support, or source equal to target) or `engine_unavailable`. `missingPackage` is a naming suggestion: the worker has no
+network and cannot confirm the package exists upstream.
+
+#### `models.install`
+
+The explicit, user-initiated way to add a model. Request `{ "path": "C:\\Users\\me\\Downloads\\translate-de_en-1_9.argosmodel" }`.
+
+The worker validates before installing: absolute path, `.argosmodel` extension, a regular file of at most 1 GiB, a readable zip
+archive with exactly one top-level directory, an allow-list of entry names, a `metadata.json` whose `from_code`, `to_code` and
+`package_version` are valid, `model/model.bin`, `model/config.json` and a `sentencepiece.model`, no entry that escapes the archive
+(zip slip), no absolute names or symlinks, and bounded entry count, expansion ratio and total uncompressed size (enforced while
+streaming, not from the headers). It extracts only the files it needs (the `stanza/` data is skipped), into a staging directory, then
+moves it into place atomically. Packages that use a BPE tokenizer (`bpe.model`: cs, da, es, fi, hu, id, lt, ro, uk) are not
+supported yet and are refused with `unsupported_package`. There is no signature to verify (Argos publishes none), so importing is a
+trust decision for the user; the worker records the archive's SHA-256 in its own manifest.
+
+```json
+{ "package": { "from": "de", "to": "en", "fromName": "German", "toName": "English", "version": "1.9", "packageName": "translate-de_en" },
+  "replaced": false }
+```
+
+Error codes: `invalid_request`, `package_not_found`, `invalid_package`, `unsupported_package`, `install_failed`,
+`engine_unavailable`.
+
+**Model storage.** `%LOCALAPPDATA%\GlyphLens\models\<from>_<to>\` (the files the engine needs plus a `glyphlens-model.json` manifest),
+overridable with `GLYPHLENS_MODELS_DIR` (absolute path; used by tests). Nothing is written to Argos' own directories because Argos is
+never imported. Model files are never part of the repository.
+
+#### `ocr.detect`
+
+Recognises the text lines of one screen capture with the worker's local OCR engine (PaddleOCR PP-OCRv5 mobile, run with ONNX Runtime;
+see [ADR-0006](decisions/ADR-0006-direct-argos-model-engine.md) and [research/CHINESE-FIRST-EVALUATION.md](research/CHINESE-FIRST-EVALUATION.md)).
+One model reads Simplified and Traditional Chinese, English, Japanese and digits, so there is no language argument.
+
+```json
+// request: one PNG (8-bit RGB), base64 in the JSON string (at most 40 megapixels and 16384 px on a side; the whole message must stay under 16 MiB)
+{ "image": { "format": "png", "dataBase64": "iVBORw0KGgo..." } }
+// result: lines in reading order (top to bottom, left to right within a row), pixel boxes of the submitted image
+{ "engine": "paddleocr 3.7.0 PP-OCRv5 mobile, onnxruntime 1.32.0", "width": 564, "height": 687, "elapsedMs": 612,
+  "regions": [ { "text": "...", "x": 34, "y": 82, "width": 382, "height": 23, "confidence": 0.987 } ] }
+```
+
+`confidence` is the recogniser's own score for the line in [0, 1]. An image without text is an empty `regions` list, not an error.
+Error codes: `invalid_request` (not a PNG, bad base64, too many pixels), `engine_unavailable` (the OCR runtime or its model files are
+missing; the message says how to install them), `ocr_failed` (the recogniser raised; the message holds only the exception type).
+The models are read from `<models>/ocr/PP-OCRv5_mobile_det_onnx` and `.../PP-OCRv5_mobile_rec_onnx` (each with `inference.onnx` and
+`inference.yml`); they are placed there by the user, never downloaded by the worker. `engines.ocr` in `worker.health` is
+`unavailable` (libraries missing or failed), `not_installed` (libraries present, model files missing), `installed` or `ready`.
+
+The frame is encoded as PNG in memory by the application and sent only over the authenticated local pipe; it is never written to disk.
+
+#### Still reserved
+
+`translation.cancel` is a known type and receives `error` / `engine_unavailable`. Any other type receives `unknown_message_type`.
 
 ## 5. Errors
 
@@ -109,8 +264,9 @@ therefore not yet exercised.
 ```
 
 Codes the worker actually emits: `invalid_message`, `unsupported_protocol_version`, `unknown_message_type`,
-`not_initialized`, `engine_unavailable`, `payload_too_large`, `internal_error`. (`timeout`, `cancelled`,
-`duplicate_request_id`, `model_not_installed` from the earlier draft are not used yet.)
+`not_initialized`, `engine_unavailable`, `payload_too_large`, `internal_error`, and for the translation messages
+`invalid_request`, `package_not_found`, `invalid_package`, `unsupported_package`, `install_failed`. (`timeout`, `cancelled`,
+`duplicate_request_id`, `model_not_installed` from the earlier draft are not used.)
 
 - Error messages and logs never contain payload content.
 - A well-framed but invalid message (bad JSON, invalid UTF-8, bad envelope, missing request id, unsupported version) gets an error
@@ -123,7 +279,8 @@ Codes the worker actually emits: `invalid_message`, `unsupported_protocol_versio
 
 - Requests are correlated by `requestId`; responses may arrive in any order. At most 32 requests may wait at once (more are
   rejected, not queued). Late or unsolicited responses are ignored and logged without content.
-- The worker handles one request at a time.
+- The worker handles one request at a time. The application's request channel refuses `worker.initialize` and `worker.shutdown`
+  (only the process manager sends them), never starts a worker by itself, and a request timeout does not close the connection.
 - Defaults (`WorkerManagerOptions`): connect 15 s, initialize 10 s, request (health) 5 s, shutdown acknowledgement 3 s, graceful
   exit 5 s. A request timeout does not close the connection. Three consecutive health timeouts treat the worker as hung (killed
   and restarted). **Periodic health polling is not implemented**; health is queried at start and on demand.

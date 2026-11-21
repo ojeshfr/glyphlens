@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using GlyphLens.App.Mvvm;
 using GlyphLens.Core.Abstractions;
@@ -38,6 +39,8 @@ public sealed class CaptureViewModel : ViewModelBase, IDisposable
     private string? _errorDetail;
     private string _frameSizeText = "—";
     private string _frameSequenceText = "—";
+    private string _frameRateText = "—";
+    private readonly FrameRateMeter _frameRate = new(TimeSpan.FromSeconds(2));
     private string _targetInfoText = string.Empty;
     private bool _isRefreshing;
     private CancellationTokenSource? _metricsCts;
@@ -207,6 +210,16 @@ public sealed class CaptureViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _frameSequenceText, value);
     }
 
+    /// <summary>
+    /// The frame rate actually measured over the last two seconds (frames published by the capture, from its own counter), or a dash.
+    /// Windows delivers a frame only when the picture changes, so a static screen honestly reads 0.
+    /// </summary>
+    public string FrameRateText
+    {
+        get => _frameRateText;
+        private set => SetProperty(ref _frameRateText, value);
+    }
+
     /// <summary>Description of the captured target while capturing (name and pixel size).</summary>
     public string TargetInfoText
     {
@@ -239,11 +252,18 @@ public sealed class CaptureViewModel : ViewModelBase, IDisposable
         {
             FrameSizeText = "—";
             FrameSequenceText = "—";
+            FrameRateText = "—";
+            _frameRate.Reset();
             return;
         }
 
         FrameSizeText = string.Create(CultureInfo.InvariantCulture, $"{metadata.Width} × {metadata.Height} px");
         FrameSequenceText = metadata.Sequence.ToString("N0", CultureInfo.InvariantCulture);
+
+        long ticks = (long)(Stopwatch.GetTimestamp() * ((double)TimeSpan.TicksPerSecond / Stopwatch.Frequency));
+        FrameRateText = _frameRate.Add(_service.Frames.Version, ticks) is { } fps
+            ? string.Create(CultureInfo.InvariantCulture, $"{fps:0.0} frames/s")
+            : "—";
     }
 
     public void Dispose()

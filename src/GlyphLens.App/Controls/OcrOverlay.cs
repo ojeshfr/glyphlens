@@ -16,8 +16,9 @@ public sealed class OcrOverlay : FrameworkElement
         typeof(OcrOverlay),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    private static readonly Brush Fill = Freeze(new SolidColorBrush(Color.FromArgb(40, 0x4C, 0x8D, 0xFF)));
-    private static readonly Pen Outline = FreezePen(new Pen(new SolidColorBrush(Color.FromRgb(0x4C, 0x8D, 0xFF)), 3));
+    // The boxes use the accent token (Themes/Tokens.xaml), read when drawing so a palette change needs no code change.
+    private const byte FillAlpha = 40;
+    private static readonly Color FallbackAccent = Colors.RoyalBlue;
 
     public IReadOnlyList<OcrBox>? Boxes
     {
@@ -32,9 +33,12 @@ public sealed class OcrOverlay : FrameworkElement
             return;
         }
 
+        var accent = TryFindResource("AccentColor") is Color color ? color : FallbackAccent;
+        var fill = Freeze(new SolidColorBrush(Color.FromArgb(FillAlpha, accent.R, accent.G, accent.B)));
+        var outline = FreezePen(new Pen(new SolidColorBrush(accent), 3));
         foreach (var box in boxes)
         {
-            drawingContext.DrawRectangle(Fill, Outline, new Rect(box.X, box.Y, box.Width, box.Height));
+            drawingContext.DrawRectangle(fill, outline, new Rect(box.X, box.Y, box.Width, box.Height));
         }
     }
 

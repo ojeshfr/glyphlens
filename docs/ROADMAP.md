@@ -76,7 +76,14 @@ low-contrast text, and real application content.
 - **Testing requirements:** Table-driven fusion tests with synthetic regions; language-detection
   accuracy checks on a small, license-clean sample set.
 
-## Phase 4 — Offline translation
+## Phase 4 — Offline translation ✅ (Chinese first; other languages pending)
+
+*Done in the Chinese-first milestone:* Argos zh/zt to English through our own CTranslate2 engine, validating model import, script-based
+language identification, paragraph grouping, cache, hallucination guard. *Next:* BPE-tokenizer packages (Spanish and eight more),
+a comparison with one alternative offline model on `eval/zh-en/dataset.json`, skipping OCR of unchanged regions, a model download UI
+(explicit, with checksums), other target languages.
+
+## Phase 4 (original plan)
 
 - **Scope:** Local translation into English; model packages; cache.
 - **Deliverables:** Argos Translate adapter and `translation.*` handlers; `models.*` handlers;
@@ -87,7 +94,13 @@ low-contrast text, and real application content.
 - **Testing requirements:** Cache tests; cancellation tests; offline test (network disabled) in CI
   where possible; no model downloads in default CI runs.
 
-## Phase 5 — Floating translation overlay
+## Phase 5 — Floating translation overlay ✅ (first version)
+
+*Done:* native WPF overlay window, interactive and pass-through modes with an unlock handle, capture exclusion, placement
+and persistence logic, shortcuts, lifecycle. *Next:* verification on more than one monitor, mixed DPI and Windows 10, a region-masking
+fallback for builds without `WDA_EXCLUDEFROMCAPTURE`, highlighting a card's source region on screen, a tray icon, themes.
+
+## Phase 5 (original plan)
 
 - **Scope:** Transparent click-through overlays positioned over source text.
 - **Deliverables:** Overlay windows per monitor, excluded from capture; overlay view models;

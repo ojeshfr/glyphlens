@@ -1,14 +1,20 @@
+using GlyphLens.Core.Models;
+
 namespace GlyphLens.Core.Abstractions;
 
 /// <summary>
-/// Identifies the language of a piece of text locally.
+/// Identifies the language of texts locally.
 /// </summary>
-/// <remarks>Planned implementation: local language identification inside the Python worker (Phase 3).</remarks>
+/// <remarks>
+/// Implementation: a local library inside the Python worker, reached over IPC (<c>language.detect</c>). It makes no
+/// network requests. A detector is not infallible: very short or mixed text yields low confidence or no answer, and
+/// callers let the user override the language.
+/// </remarks>
 public interface ILanguageDetector
 {
     /// <summary>
-    /// Returns a language code (see <see cref="Models.LanguageCode"/>), or <see langword="null"/>
-    /// when the language cannot be determined with sufficient confidence.
+    /// Detects the language of each text. The result has one entry per input, in order.
     /// </summary>
-    Task<string?> DetectLanguageAsync(string text, CancellationToken cancellationToken);
+    /// <exception cref="WorkerException">The worker is unavailable or failed.</exception>
+    Task<IReadOnlyList<LanguageDetectionResult>> DetectAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken);
 }

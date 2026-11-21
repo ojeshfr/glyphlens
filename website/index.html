@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GlyphLens</title>
+<meta name="description" content="GlyphLens reads Chinese text on a window or display with a local OCR and shows the English translation in a floating panel above your apps. Offline. Early preview for Windows 11.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)">
+<meta property="og:title" content="GlyphLens">
+<meta property="og:description" content="Read any Chinese screen in English. Offline, on your PC.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Noto+Sans+SC:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <a class="brand" href="#top" aria-label="GlyphLens home">
+      <span class="mark" aria-hidden="true">G</span>
+      <span class="brand-name">GlyphLens</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#get">Get it</a>
+    </nav>
+    <div class="seg seg-theme" role="radiogroup" aria-label="Page appearance">
+      <button type="button" role="radio" aria-checked="false" data-theme-choice="system">System</button>
+      <button type="button" role="radio" aria-checked="false" data-theme-choice="light">Light</button>
+      <button type="button" role="radio" aria-checked="false" data-theme-choice="dark">Dark</button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" id="top">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="chip"><span class="dot" aria-hidden="true"></span>Early preview · Windows 11</p>
+        <h1>Read any Chinese screen in English.<span class="soft"> Offline.</span></h1>
+        <p class="lede">GlyphLens reads the text on a window or display with a local OCR, then shows the translation in a small panel that floats above your other apps. Nothing from your screen leaves your PC.</p>
+        <div class="cta-row">
+          <a class="btn primary" href="#how">See how it works</a>
+          <a class="btn" href="#privacy">Read the privacy details</a>
+        </div>
+        <p class="fine">Simplified and Traditional Chinese to English. Built and tested on Windows 11.</p>
+      </div>
+
+      <figure class="stage" aria-labelledby="stage-cap">
+        <div class="stage-art" role="img" aria-label="A chat window with two Chinese messages and, floating over it, the GlyphLens panel showing each message with its English translation.">
+          <div class="chat" aria-hidden="true">
+            <div class="chat-bar"><span>聊天 · Chat</span><span class="chat-ctl">—&nbsp;&nbsp;□&nbsp;&nbsp;✕</span></div>
+            <div class="chat-body">
+              <p class="bubble zh" lang="zh-Hans">你今天晚上有空吗？我们一起去吃饭吧。</p>
+              <p class="bubble zh me" lang="zh-Hans">好啊，几点见？</p>
+              <p class="bubble zh" lang="zh-Hans">明天的会议改到下午三点了，请大家准时参加。</p>
+            </div>
+          </div>
+          <div class="panel" aria-hidden="true">
+            <div class="panel-head">
+              <span class="mark sm">G</span>
+              <span class="panel-title"><b>GlyphLens</b><small>Auto → English</small></span>
+              <span class="live"><i></i>Live</span>
+            </div>
+            <div class="tr">
+              <p class="orig" lang="zh-Hans">你今天晚上有空吗？我们一起去吃饭吧。</p>
+              <p class="en">Are you free tonight? Let's eat together.</p>
+            </div>
+            <div class="tr">
+              <p class="orig" lang="zh-Hans">明天的会议改到下午三点了，请大家准时参加。</p>
+              <p class="en">Tomorrow's meeting has been rescheduled to 3 p.m., so please be on time.</p>
+            </div>
+          </div>
+        </div>
+        <figcaption id="stage-cap">The chat window is a mock-up. The sentences and the English text come from GlyphLens' own test set.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="band" id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <h2 id="how-h">Three steps, all on your PC</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-n" aria-hidden="true">1</span>
+          <h3>Pick what to read</h3>
+          <p>Choose a window or a whole display from a list and press Start. Capture runs only while you want it to.</p>
+        </li>
+        <li>
+          <span class="step-n" aria-hidden="true">2</span>
+          <h3>The text is read locally</h3>
+          <p>A local OCR (PP-OCRv5) reads the Chinese in a worker process on your computer. Lines of one chat message are merged back into one message before they are translated.</p>
+        </li>
+        <li>
+          <span class="step-n" aria-hidden="true">3</span>
+          <h3>The translation floats above your apps</h3>
+          <p>A small panel shows each original with its English translation. Pin it, make it click-through, copy either text, and keep working in the app underneath.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="wrap section" id="features" aria-labelledby="feat-h">
+    <h2 id="feat-h">Made for reading Chinese on a PC</h2>
+    <div class="grid">
+      <article class="card">
+        <h3>Chinese first</h3>
+        <p>Simplified and Traditional Chinese go to English. When Chinese is what you translate, GlyphLens chooses the local Chinese OCR by itself and never overrides a choice you made.</p>
+      </article>
+      <article class="card">
+        <h3>A panel that stays out of the way</h3>
+        <p>It floats above other windows without taking focus. In click-through mode your mouse and keyboard pass straight to the app underneath, and a small handle brings the panel back.</p>
+      </article>
+      <article class="card">
+        <h3>Live reading that only re-reads what changed</h3>
+        <p>For a chat that keeps growing, only the changed part of the screen is read again. On our test PC a Live pass took a median of 142 ms, against 733 ms when every frame was read in full.</p>
+        <p class="note">One run on one PC (Intel Core i7-12700H, no GPU). A measurement, not a benchmark.</p>
+      </article>
+      <article class="card">
+        <h3>Honest about its state</h3>
+        <p>The panel says what is happening: Live, Paused, Capture stopped, Model missing. Green appears only when the worker answers and a screen is being read.</p>
+      </article>
+      <article class="card">
+        <h3>Light and dark</h3>
+        <p>Follows Windows, or stays light or dark as you choose. Text size and opacity of the panel are yours to set.</p>
+      </article>
+      <article class="card">
+        <h3>Updates you control</h3>
+        <p>GlyphLens can check for a new version about once a day. Every update is signed, nothing is installed without your click, and the check can be turned off.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="band alt" id="look" aria-labelledby="look-h">
+    <div class="wrap">
+      <div class="look-head">
+        <h2 id="look-h">A calm, native-feeling window</h2>
+        <div class="seg" role="radiogroup" aria-label="Screenshot appearance">
+          <button type="button" role="radio" aria-checked="true" data-shot="light">Light</button>
+          <button type="button" role="radio" aria-checked="false" data-shot="dark">Dark</button>
+        </div>
+      </div>
+      <div class="shots">
+        <figure class="shot wide">
+          <img src="assets/light-main-Capture.avif" data-src="main-Capture" alt="The GlyphLens Capture page: choose a display or window, start capture, read text and translate." width="740" height="492" loading="lazy">
+          <figcaption>Capture: choose what to read, switch Live reading and translation on.</figcaption>
+        </figure>
+        <figure class="shot tall">
+          <img src="assets/light-overlay.avif" data-src="overlay" alt="The floating GlyphLens panel with three translated messages." width="360" height="504" loading="lazy">
+          <figcaption>The floating panel.</figcaption>
+        </figure>
+        <figure class="shot wide">
+          <img src="assets/light-main-Settings.avif" data-src="main-Settings" alt="The GlyphLens Settings page with appearance, overlay and update settings." width="740" height="492" loading="lazy">
+          <figcaption>Settings: appearance, panel size and opacity, updates.</figcaption>
+        </figure>
+      </div>
+      <p class="fine center">Images are rendered from the real app with sample data, in light and dark.</p>
+    </div>
+  </section>
+
+  <section class="wrap section" id="privacy" aria-labelledby="priv-h">
+    <h2 id="priv-h">Your screen stays on your PC</h2>
+    <p class="lede narrow">GlyphLens is built so that what you read is never the thing that travels. Here is exactly what happens, and what is not proven.</p>
+    <div class="two">
+      <div class="card">
+        <h3>What stays on your PC</h3>
+        <ul class="ticks">
+          <li>Screenshots and recognised text live in memory only. They are never written to disk or logged.</li>
+          <li>OCR and translation run in a local worker process that is forbidden to open network connections.</li>
+          <li>Translation models are files you put on your PC. GlyphLens never downloads them.</li>
+          <li>It remembers only the panel's position, size, opacity and text size, your appearance choice, and the update settings.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>What uses the network</h3>
+        <ul class="ticks">
+          <li>The update check, about once a day, and only if you leave it on. It sends the request itself and nothing from your screen.</li>
+          <li>An update installer is downloaded only when you press Download, and it is checked against a signed SHA-256 before it can run.</li>
+          <li>No account, no sign-in, no analytics.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="proof">
+      <h3>How we check it</h3>
+      <p>The Overview page lists the network connections owned by GlyphLens and its worker whenever you ask. In our own test run, 28 samples over 61 seconds of Live reading and translation found no remote connection and no open UDP endpoint.</p>
+      <p class="note">Sampling can miss a connection that opens and closes between two samples. We have not captured packets or blocked GlyphLens with a firewall, so this is evidence, not proof.</p>
+    </div>
+  </section>
+
+  <section class="band alt" id="keys" aria-labelledby="keys-h">
+    <div class="wrap">
+      <h2 id="keys-h">Five shortcuts, from any app</h2>
+      <p class="lede narrow">They work while another program is in front, and GlyphLens tells you if Windows or another program already owns one.</p>
+      <dl class="keys">
+        <div><dt><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>T</kbd></dt><dd>Turn translation on or off</dd></div>
+        <div><dt><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>O</kbd></dt><dd>Show or hide the panel</dd></div>
+        <div><dt><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></dt><dd>Pause or resume</dd></div>
+        <div><dt><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>I</kbd></dt><dd>Switch between interactive and click-through</dd></div>
+        <div><dt><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>C</kbd></dt><dd>Clear the results</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="wrap section" id="get" aria-labelledby="get-h">
+    <h2 id="get-h">Where it stands</h2>
+    <div class="status">
+      <div class="status-main">
+        <p class="chip warn"><span class="dot" aria-hidden="true"></span>Not released yet</p>
+        <h3>There is no installer to download today</h3>
+        <p>GlyphLens is an early preview. This page will carry the download link when a signed installer exists. The code has no distribution licence yet, so it is not offered for redistribution.</p>
+        <button class="btn primary" type="button" disabled>Download for Windows (not available yet)</button>
+      </div>
+      <div class="status-side">
+        <h3>What the preview needs</h3>
+        <ul class="plain">
+          <li><b>Windows 11, 64-bit.</b> Tested on build 26200. Windows 10 and other display scales are not tested.</li>
+          <li><b>A local worker environment.</b> The worker runs on Python, which you set up once.</li>
+          <li><b>Two model sets you download yourself.</b> The PP-OCRv5 OCR folders and an Argos Translate Chinese-to-English package (CC-BY 4.0). GlyphLens never fetches models for you.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="band alt" id="faq" aria-labelledby="faq-h">
+    <div class="wrap narrow-col">
+      <h2 id="faq-h">Questions</h2>
+      <details>
+        <summary>Does it work without an internet connection?</summary>
+        <p>Yes. Reading and translating need no network. Only the optional update check does.</p>
+      </details>
+      <details>
+        <summary>How good are the translations?</summary>
+        <p>The translation model is Argos Translate, a compact model that runs on a CPU. On our own 52-sentence test it gets the meaning across, with a median of 72 ms per sentence, and it is not a human translator. The panel keeps the original next to the translation so you can check it.</p>
+      </details>
+      <details>
+        <summary>Why are the models not included?</summary>
+        <p>Each model has its own licence and size, and you stay in control of what is on your PC. GlyphLens reports clearly which model is missing and where to put it.</p>
+      </details>
+      <details>
+        <summary>Which languages are supported?</summary>
+        <p>Simplified and Traditional Chinese to English. Other languages are not offered until they have been tested properly.</p>
+      </details>
+      <details>
+        <summary>Is there a macOS version?</summary>
+        <p>No. The look is inspired by Apple's design, but GlyphLens is a Windows app.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-row">
+    <span class="brand"><span class="mark sm" aria-hidden="true">G</span><span class="brand-name">GlyphLens</span></span>
+    <span class="fine">Early preview · Page updated 21 November 2026</span>
+  </div>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>

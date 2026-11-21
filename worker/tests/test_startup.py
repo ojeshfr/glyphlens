@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import contextlib
 import errno
+import io
+import socket
 import unittest
 from unittest import mock
 
 from glyphlens_worker import main as worker_main
 from glyphlens_worker.config import settings
-from glyphlens_worker.runtime import pipe, server
+from glyphlens_worker.runtime import network_guard, pipe, server
 
 VALID_PIPE = "glyphlens-" + "0123456789abcdef" * 2
 
@@ -107,10 +110,49 @@ class RunPipeSessionTests(unittest.TestCase):
             self.assertEqual(worker_main.run_pipe_session(VALID_PIPE), server.EXIT_CONNECT_FAILED)
 
     def test_main_dispatches_pipe_mode_and_returns_its_exit_code(self) -> None:
+        self.addCleanup(network_guard.uninstall)
+
         with mock.patch.object(worker_main, "run_pipe_session", return_value=5) as run:
             self.assertEqual(worker_main.main(["--pipe", VALID_PIPE]), 5)
 
         run.assert_called_once_with(VALID_PIPE)
+
+    def test_the_network_guard_is_installed_before_the_session_starts(self) -> None:
+        network_guard.uninstall()
+        self.addCleanup(network_guard.uninstall)
+        seen: list[bool] = []
+
+        def session(_pipe_name: str) -> int:
+            seen.append(network_guard.is_installed())
+            return 0
+
+        with mock.patch.object(worker_main, "run_pipe_session", session):
+            worker_main.main(["--pipe", VALID_PIPE])
+
+        self.assertEqual(seen, [True])
+
+    def test_version_and_health_modes_do_not_install_the_guard(self) -> None:
+        network_guard.uninstall()
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            worker_main.main(["--version"])
+            worker_main.main(["--health"])
+
+        self.assertFalse(network_guard.is_installed())
+
+    def test_blocked_attempts_are_logged_by_name_only(self) -> None:
+        network_guard.uninstall()
+        self.addCleanup(network_guard.uninstall)
+        logged: list[str] = []
+
+        with mock.patch.object(worker_main, "run_pipe_session", return_value=0), mock.patch.object(
+            worker_main, "stderr_log", logged.append
+        ):
+            worker_main.main(["--pipe", VALID_PIPE])
+            with self.assertRaises(network_guard.NetworkBlockedError):
+                socket.getaddrinfo("secret-host.example.invalid", 443)
+
+        self.assertEqual(logged, ["blocked a network attempt (socket.getaddrinfo)"])
 
     def test_exit_codes_are_distinct(self) -> None:
         codes = [server.EXIT_OK, server.EXIT_USAGE, server.EXIT_CONNECT_FAILED, server.EXIT_PROTOCOL_ERROR, server.EXIT_PIPE_LOST, server.EXIT_NO_TOKEN]

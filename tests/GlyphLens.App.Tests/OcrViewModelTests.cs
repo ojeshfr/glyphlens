@@ -1,5 +1,7 @@
 using GlyphLens.App.ViewModels;
+using GlyphLens.Core.Abstractions;
 using GlyphLens.Core.Models;
+using GlyphLens.Core.Ocr;
 
 namespace GlyphLens.App.Tests;
 
@@ -105,6 +107,69 @@ public class OcrViewModelTests
         Assert.False(rig.Vm.HasError);
         Assert.True(rig.Vm.CanCopy);
         Assert.Equal($"Hello world{Environment.NewLine}Second line", rig.Vm.RecognisedText);
+    }
+
+    [Fact]
+    public async Task ReadText_OfAWindow_SetsAsideItsTitleBarGlyphAndTitle_AndSaysSo()
+    {
+        var rig = Create();
+        rig.Ocr.Result =
+        [
+            FakeOcr.Region("- Notes", 12, 8, 90, 24),
+            FakeOcr.Region("X", 1880, 8, 22, 25),
+            FakeOcr.Region("Hello world", 10, 120, 200, 30),
+        ];
+        await rig.Capture.StartAsync(new CaptureTarget("window:1", CaptureTargetKind.Window, "Notes", 1920, 1080));
+        rig.Capture.Mailbox.Publish(Frame(1));
+
+        await rig.Vm.ReadTextCommand.ExecuteAsync();
+
+        Assert.Equal(["Hello world"], rig.Vm.Lines.Select(l => l.Text));
+        Assert.Single(rig.Overlay.Boxes);
+        Assert.Contains("2 title-bar items set aside", rig.Vm.StatusText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReadText_OfADisplay_KeepsATitleLikeLineButStillDropsAButtonGlyph()
+    {
+        var rig = Create();
+        rig.Ocr.Result =
+        [
+            FakeOcr.Region("Notes", 12, 8, 90, 24),
+            FakeOcr.Region("X", 1880, 8, 22, 25),
+        ];
+        await StartCaptureWithFrameAsync(rig);
+
+        await rig.Vm.ReadTextCommand.ExecuteAsync();
+
+        Assert.Equal(["Notes"], rig.Vm.Lines.Select(l => l.Text));
+        Assert.Contains("1 title-bar item set aside", rig.Vm.StatusText, StringComparison.Ordinal);
+    }
+
+    private sealed class ReportingOcr(FakeOcr inner) : IOcrEngine, IOcrPassReporter
+    {
+        public OcrPassInfo? LastPass { get; set; }
+
+        public Task<IReadOnlyList<ScreenTextRegion>> RecognizeAsync(CapturedFrame frame, CancellationToken cancellationToken) =>
+            inner.RecognizeAsync(frame, cancellationToken);
+    }
+
+    [Theory]
+    [InlineData(OcrPassKind.Partial, 0.123, " · updated 12 % of the frame")]
+    [InlineData(OcrPassKind.Unchanged, 0.0, " · screen unchanged")]
+    [InlineData(OcrPassKind.Full, 1.0, "")]
+    public async Task ReadText_SaysWhenOnlyPartOfTheFrameWasRead(OcrPassKind kind, double fraction, string expectedSuffix)
+    {
+        var fake = new FakeOcr();
+        var engine = new ReportingOcr(fake) { LastPass = new OcrPassInfo(kind, fraction, 1, null) };
+        var capture = new FakeCaptureService();
+        var vm = new OcrViewModel(engine, fake, capture, new OverlayState(), null, null, TimeSpan.FromMilliseconds(10));
+        await capture.StartAsync(Display);
+        capture.Mailbox.Publish(Frame(1));
+
+        await vm.ReadTextCommand.ExecuteAsync();
+
+        Assert.EndsWith("en-US" + expectedSuffix, vm.StatusText, StringComparison.Ordinal); // the recognised language comes first
     }
 
     [Fact]
@@ -216,6 +281,52 @@ public class OcrViewModelTests
         Assert.False(rig.Vm.CanReadText);
         Assert.False(rig.Vm.CanCopy);
         Assert.Equal("Start a capture, then read its text.", rig.Vm.StatusText);
+    }
+
+    [Fact]
+    public async Task EveryReadingPass_RaisesRegionsRecognised_WithTheRegionsOfThatPass()
+    {
+        var rig = Create();
+        var raised = new List<RegionsRecognisedEventArgs>();
+        rig.Vm.RegionsRecognised += (_, e) => raised.Add(e);
+        await StartCaptureWithFrameAsync(rig);
+
+        await rig.Vm.ReadTextCommand.ExecuteAsync();
+
+        var args = Assert.Single(raised);
+        Assert.False(args.Discarded);
+        Assert.Equal(rig.Ocr.Result.Select(r => r.Id), args.Regions.Select(r => r.Id));
+        Assert.Equal(rig.Ocr.Result.Select(r => (r.X, r.Y, r.Width, r.Height)), args.Regions.Select(r => (r.X, r.Y, r.Width, r.Height)));
+    }
+
+    [Fact]
+    public async Task StoppingTheCapture_RaisesADiscardedEvent_SoDerivedResultsAreForgotten()
+    {
+        var rig = Create();
+        var raised = new List<RegionsRecognisedEventArgs>();
+        await StartCaptureWithFrameAsync(rig);
+        await rig.Vm.ReadTextCommand.ExecuteAsync();
+        rig.Vm.RegionsRecognised += (_, e) => raised.Add(e);
+
+        await rig.Capture.StopAsync();
+
+        var args = Assert.Single(raised);
+        Assert.True(args.Discarded);
+        Assert.Empty(args.Regions);
+    }
+
+    [Fact]
+    public async Task AFailedReading_DoesNotRaiseRegionsRecognised()
+    {
+        var rig = Create();
+        var raised = 0;
+        rig.Vm.RegionsRecognised += (_, _) => raised++;
+        await StartCaptureWithFrameAsync(rig);
+        rig.Ocr.Failure = new OcrException("engine failed");
+
+        await rig.Vm.ReadTextCommand.ExecuteAsync();
+
+        Assert.Equal(0, raised);
     }
 
     [Fact]

@@ -1,1 +1,1 @@
-"""OCR engine adapter (planned: PaddleOCR). Not implemented in Phase 0."""
+"""OCR engine adapter (planned: PaddleOCR). Not implemented: ocr.detect answers engine_unavailable."""

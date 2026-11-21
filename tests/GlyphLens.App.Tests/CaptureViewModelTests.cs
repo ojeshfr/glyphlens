@@ -196,6 +196,30 @@ public class CaptureViewModelTests
     }
 
     [Fact]
+    public async Task TheFrameRate_IsMeasuredFromTheFramesPublished_AndClearedWhenCaptureStops()
+    {
+        var (vm, service, _) = await CreateAsync();
+        Assert.Equal("—", vm.FrameRateText);
+        await vm.StartCommand.ExecuteAsync();
+        service.Mailbox.Publish(Frame(1));
+        vm.RefreshFrameInfo();
+        Assert.Equal("—", vm.FrameRateText); // one sample: no rate yet
+
+        await Task.Delay(120);
+        for (int i = 2; i <= 6; i++)
+        {
+            service.Mailbox.Publish(Frame(i));
+        }
+
+        vm.RefreshFrameInfo();
+        Assert.Matches(@"^\d+\.\d frames/s$", vm.FrameRateText);
+        Assert.NotEqual("0.0 frames/s", vm.FrameRateText);
+
+        await vm.StopCommand.ExecuteAsync();
+        Assert.Equal("—", vm.FrameRateText);
+    }
+
+    [Fact]
     public async Task StartStopStart_RepeatsCleanly()
     {
         var (vm, service, _) = await CreateAsync();

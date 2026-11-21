@@ -18,19 +18,19 @@
             <Setter Property="Width" Value="10" />
             <Setter Property="Height" Value="10" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Fill" Value="{StaticResource StatusIdleBrush}" />
+            <Setter Property="Fill" Value="{DynamicResource TextMutedBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Capturing}">
-                    <Setter Property="Fill" Value="{StaticResource StatusOkBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Starting}">
-                    <Setter Property="Fill" Value="{StaticResource StatusBusyBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Stopping}">
-                    <Setter Property="Fill" Value="{StaticResource StatusBusyBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CaptureStatus.Faulted}">
-                    <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -48,46 +48,58 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Title and status -->
-        <Grid Grid.Row="0" Margin="0,0,0,14">
-            <TextBlock Text="Screen capture" Style="{StaticResource SectionTitle}" />
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Ellipse Style="{StaticResource StatusDot}" Margin="0,0,8,0" />
-                <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" Margin="0,0,20,0" AutomationProperties.AutomationId="CaptureStatusText" />
-                <Button Content="Start capture" Command="{Binding StartCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Padding="16,5"
+        <!-- Title and status (the status moves under the title when the column is narrow); the buttons sit on their own line -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <WrapPanel Grid.Row="0">
+                <TextBlock Text="Screen capture" Style="{StaticResource SectionTitle}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Style="{StaticResource StatusDot}" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" AutomationProperties.AutomationId="CaptureStatusText" />
+                </StackPanel>
+            </WrapPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
+                <Button Content="Start capture" Command="{Binding StartCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
                         AutomationProperties.AutomationId="StartCaptureButton" />
-                <Button Content="Stop" Command="{Binding StopCommand}" Padding="16,5"
+                <Button Content="Stop" Command="{Binding StopCommand}"
                         AutomationProperties.AutomationId="StopCaptureButton" AutomationProperties.Name="Stop capture" />
             </StackPanel>
         </Grid>
 
-        <!-- Controls -->
-        <Grid Grid.Row="1" Margin="0,0,0,14">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,14,0" VerticalAlignment="Center">
-                <RadioButton Content="Display" IsChecked="{Binding IsDisplayKind}" IsEnabled="{Binding CanChooseTarget}" Margin="0,0,12,0"
-                             AutomationProperties.AutomationId="TargetKindDisplay" />
-                <RadioButton Content="Window" IsChecked="{Binding IsWindowKind}" IsEnabled="{Binding CanChooseTarget}"
-                             AutomationProperties.AutomationId="TargetKindWindow" />
-            </StackPanel>
-
-            <ComboBox Grid.Column="1" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption}" DisplayMemberPath="Label"
-                      IsEnabled="{Binding CanChooseTarget}" MinWidth="200"
-                      AutomationProperties.AutomationId="TargetSelector" AutomationProperties.Name="Capture target" />
-
-            <Button Grid.Column="2" Content="Refresh" Command="{Binding RefreshCommand}" Margin="8,0,0,0" Padding="12,5"
-                    AutomationProperties.AutomationId="RefreshButton" />
-        </Grid>
+        <!-- Controls: the kind of target on one line, the target list and Refresh on the next (fits the narrowest column) -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,14">
+            <Border Style="{StaticResource SegmentedTrack}" HorizontalAlignment="Left" Margin="0,0,0,10">
+                <UniformGrid Rows="1">
+                    <RadioButton Content="Display" IsChecked="{Binding IsDisplayKind}" IsEnabled="{Binding CanChooseTarget}" Style="{StaticResource Segment}"
+                                 AutomationProperties.AutomationId="TargetKindDisplay" />
+                    <RadioButton Content="Window" IsChecked="{Binding IsWindowKind}" IsEnabled="{Binding CanChooseTarget}" Style="{StaticResource Segment}"
+                                 AutomationProperties.AutomationId="TargetKindWindow" />
+                </UniformGrid>
+            </Border>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption}"
+                          IsEnabled="{Binding CanChooseTarget}" MinWidth="100" ToolTip="{Binding SelectedOption.Label}"
+                          AutomationProperties.AutomationId="TargetSelector" AutomationProperties.Name="Capture target">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="RefreshButton" AutomationProperties.Name="Refresh the target list" />
+            </Grid>
+        </StackPanel>
 
         <!-- Live preview -->
-        <Border Grid.Row="2" Background="#0A0A0B" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" MinHeight="220">
+        <Border Grid.Row="2" Background="{DynamicResource PreviewBackdropBrush}" CornerRadius="{StaticResource SectionCornerRadius}" ClipToBounds="True" MinHeight="160">
             <Grid>
                 <!-- Picture and overlay share one Viewbox so recognised-text boxes are scaled exactly like the picture. -->
                 <Viewbox Stretch="Uniform" StretchDirection="Both">
@@ -109,34 +121,34 @@
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="No capture running" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                    <TextBlock Text="Choose a display or window, then press Start capture." Style="{StaticResource MutedText}"
-                               TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    <TextBlock Text="No capture running" FontFamily="{StaticResource DisplayFont}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource OnAccentBrush}" />
+                    <TextBlock Text="Choose a display or window, then press Start capture." Foreground="{DynamicResource OnAccentBrush}" Opacity="0.72"
+                               TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Frame information and errors -->
         <StackPanel Grid.Row="3" Margin="0,14,0,0">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                    <TextBlock Text="TARGET" Style="{StaticResource InfoLabel}" />
-                    <TextBlock Text="{Binding TargetInfoText}" TextTrimming="CharacterEllipsis" AutomationProperties.AutomationId="TargetInfoText" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Margin="0,0,12,0">
-                    <TextBlock Text="FRAME SIZE" Style="{StaticResource InfoLabel}" />
+            <StackPanel Margin="0,0,0,8">
+                <TextBlock Text="Target" Style="{StaticResource InfoLabel}" />
+                <TextBlock Text="{Binding TargetInfoText}" TextTrimming="CharacterEllipsis" AutomationProperties.AutomationId="TargetInfoText" />
+            </StackPanel>
+            <WrapPanel>
+                <StackPanel Margin="0,0,24,0">
+                    <TextBlock Text="Frame size" Style="{StaticResource InfoLabel}" />
                     <TextBlock Text="{Binding FrameSizeText}" AutomationProperties.AutomationId="FrameSizeText" />
                 </StackPanel>
-                <StackPanel Grid.Column="2">
-                    <TextBlock Text="FRAME #" Style="{StaticResource InfoLabel}" />
+                <StackPanel Margin="0,0,24,0">
+                    <TextBlock Text="Frame" Style="{StaticResource InfoLabel}" />
                     <TextBlock Text="{Binding FrameSequenceText}" AutomationProperties.AutomationId="FrameSequenceText" />
                 </StackPanel>
-            </Grid>
+                <StackPanel ToolTip="Measured over the last two seconds. Windows delivers a frame only when the picture changes, so a still screen reads 0.">
+                    <TextBlock Text="Frame rate (measured)" Style="{StaticResource InfoLabel}" />
+                    <TextBlock Text="{Binding FrameRateText}" AutomationProperties.AutomationId="FrameRateText" />
+                </StackPanel>
+            </WrapPanel>
 
             <Border Style="{StaticResource ErrorBanner}" Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}"
                     Margin="0,12,0,0" ToolTip="{Binding ErrorDetail}">

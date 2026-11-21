@@ -29,6 +29,9 @@ internal sealed class FakeWorkerManager : IWorkerProcessManager
 
     public WorkerHealth? LastHealth { get; private set; }
 
+    /// <summary>What the worker reports for its OCR engine in the health of the next start.</summary>
+    public WorkerComponentState ReportedOcrState { get; set; } = WorkerComponentState.NotImplemented;
+
     public int StartCalls { get; private set; }
 
     public int StopCalls { get; private set; }
@@ -73,9 +76,17 @@ internal sealed class FakeWorkerManager : IWorkerProcessManager
         }
 
         ProcessId = 4321;
-        LastHealth = TruthfulHealth(4321);
+        LastHealth = TruthfulHealth(4321) with { Ocr = ReportedOcrState };
         LastError = null;
         Move(WorkerStatus.Ready);
+    }
+
+    /// <summary>Changes the OCR state in the health of a running worker (and notifies, as a status change does).</summary>
+    public void ReportOcr(WorkerComponentState state)
+    {
+        ReportedOcrState = state;
+        LastHealth = (LastHealth ?? TruthfulHealth()) with { Ocr = state };
+        Move(Status);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

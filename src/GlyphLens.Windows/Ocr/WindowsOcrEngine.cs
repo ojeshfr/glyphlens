@@ -142,7 +142,7 @@ public sealed class WindowsOcrEngine : IOcrEngine, IOcrLanguageSource, IDisposab
         return tight;
     }
 
-    private static SoftwareBitmap CreateBitmap(CapturedFrame frame)
+    internal static SoftwareBitmap CreateBitmap(CapturedFrame frame)
     {
         var metadata = frame.Metadata;
         var pixels = ToTightPixels(frame);

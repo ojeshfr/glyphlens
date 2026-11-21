@@ -95,6 +95,7 @@ class ValidateTests(unittest.TestCase):
             {
                 "worker.initialize", "worker.health", "worker.shutdown", "ocr.detect",
                 "translation.translate", "translation.cancel", "models.list", "models.status",
+                "models.install", "language.detect",
             },
         )
 

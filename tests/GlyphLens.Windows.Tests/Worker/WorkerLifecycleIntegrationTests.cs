@@ -43,15 +43,18 @@ public sealed class WorkerLifecycleIntegrationTests
 
         var health = await manager.GetHealthAsync(CancellationToken.None);
 
-        // Exactly the truthful report for a build with transport but no engines.
+        // A truthful report: the transport is up, and each engine says what is actually installed here (which depends on the
+        // Python environment the worker runs in), but a freshly started worker never claims an engine is Ready.
         Assert.Equal(WorkerComponentState.Ready, health.Process);
         Assert.Equal(WorkerComponentState.Connected, health.Ipc);
         Assert.Equal(WorkerComponentState.Initialized, health.Protocol);
-        Assert.Equal(WorkerComponentState.NotImplemented, health.Ocr);
-        Assert.Equal(WorkerComponentState.NotImplemented, health.LanguageDetection);
-        Assert.Equal(WorkerComponentState.NotImplemented, health.Translation);
-        Assert.Equal(WorkerComponentState.NotInstalled, health.Models);
-        Assert.Equal(pid, health.ProcessId);
+        WorkerComponentState[] installable = [WorkerComponentState.Unavailable, WorkerComponentState.NotInstalled, WorkerComponentState.Installed];
+        Assert.Contains(health.Ocr, installable);
+        Assert.Equal(WorkerComponentState.Installed, health.LanguageDetection); // script rules need no library
+        Assert.Contains(health.Translation, installable);
+        Assert.Contains(health.Models, installable);
+        // Inside a virtual environment the launched process is a thin launcher and the worker is its child, so the ids may differ.
+        Assert.True(health.ProcessId is > 0);
         Assert.Equal("1.0", health.ProtocolVersion.ToString());
         Assert.Equal($"{WorkerTestEnvironment.Python.Version.Major}.{WorkerTestEnvironment.Python.Version.Minor}", string.Join('.', health.PythonVersion!.Split('.').Take(2)));
         Assert.Equal(health, manager.LastHealth);
@@ -308,7 +311,7 @@ public sealed class WorkerLifecycleIntegrationTests
 
         Assert.Equal(WorkerStatus.Ready, manager.Status);
         var health = await manager.GetHealthAsync(CancellationToken.None);
-        Assert.Equal(manager.ProcessId, health.ProcessId);
+        Assert.True(health.ProcessId is > 0);
         Assert.NotEqual("evil", health.WorkerVersion);
     }
 

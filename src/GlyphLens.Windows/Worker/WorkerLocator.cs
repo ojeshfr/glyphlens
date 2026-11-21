@@ -12,9 +12,10 @@ public sealed record PythonInterpreter(string Path, Version Version);
 /// </summary>
 /// <remarks>
 /// <para>
-/// Interpreter search order: an explicitly configured path, then <c>GLYPHLENS_PYTHON</c>, then <c>python.exe</c> on
-/// <c>PATH</c> (skipping the Microsoft Store stub under <c>WindowsApps</c>, which opens the Store instead of running
-/// Python), then the <c>py</c> launcher. A configured path is never silently replaced by another interpreter. Every
+/// Interpreter search order: an explicitly configured path, then <c>GLYPHLENS_PYTHON</c>, then the virtual environment next
+/// to the worker package (<c>worker\.venv</c>, where the translation extras are installed for development), then
+/// <c>python.exe</c> on <c>PATH</c> (skipping the Microsoft Store stub under <c>WindowsApps</c>, which opens the Store instead
+/// of running Python), then the <c>py</c> launcher. A configured path is never silently replaced by another interpreter. Every
 /// candidate is executed once to confirm it really is Python 3.11 or newer.
 /// </para>
 /// <para>Nothing here installs software or touches the network.</para>
@@ -37,6 +38,11 @@ public static class WorkerLocator
             return Validate(configured) ?? throw new WorkerException(
                 WorkerErrorKind.PythonNotFound,
                 $"The configured Python interpreter '{configured}' is missing or is not Python {MinimumPythonVersion} or newer.");
+        }
+
+        if (WorkerVirtualEnvironmentInterpreter() is { } venv && Validate(venv) is { } fromVenv)
+        {
+            return fromVenv;
         }
 
         foreach (var candidate in PathCandidates())
@@ -89,6 +95,20 @@ public static class WorkerLocator
         throw new WorkerException(
             WorkerErrorKind.WorkerNotFound,
             $"The worker package was not found. Set {WorkerDirectoryEnvironmentVariable} to the directory containing glyphlens_worker.");
+    }
+
+    /// <summary>The interpreter of <c>&lt;worker&gt;\.venv</c> when that environment exists, otherwise <see langword="null"/>.</summary>
+    private static string? WorkerVirtualEnvironmentInterpreter()
+    {
+        try
+        {
+            var candidate = System.IO.Path.Combine(FindWorkerDirectory(), ".venv", "Scripts", "python.exe");
+            return File.Exists(candidate) ? candidate : null;
+        }
+        catch (WorkerException)
+        {
+            return null; // no worker package to look next to
+        }
     }
 
     private static bool IsWorkerDirectory(string path) =>
