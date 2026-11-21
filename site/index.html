@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>GlyphLens: Chinese on your screen, in English, on your PC</title>
+    <meta name="description" content="GlyphLens reads Chinese text on a window or display with a local OCR and shows the English translation in a small floating panel. Offline translation for Windows 11. Early preview, not released yet." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta property="og:title" content="GlyphLens" />
+    <meta property="og:description" content="Chinese on your screen, in English. Read and translated on your PC." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <!-- Sets the light/dark class before the first paint. External on purpose: the Content-Security-Policy allows no inline script. -->
+    <script src="./theme-init.js"></script>
+  </head>
+  <body>
+    <noscript>
+      <p class="noscript">This page needs JavaScript to show its content. The project and its documentation are at
+        <a href="https://github.com/ojeshfr/glyphlens">github.com/ojeshfr/glyphlens</a>.</p>
+    </noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

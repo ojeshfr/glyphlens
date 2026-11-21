@@ -1,0 +1,234 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
+
+/* Dark utilities follow the class set by public/theme-init.js (System resolves to light or dark there). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Light follows DESIGN.md section 2 (Apple's light palette with its accessible blue, green and orange);
+ * dark uses near-black surfaces, Apple's dark greys, a fill blue that keeps white text readable and a lighter blue for text.
+ * Every text/background pair is checked by scripts/contrast.mjs (WCAG 2.2 AA, 4.5:1). Components use only these tokens.
+ */
+:root {
+  color-scheme: light;
+  --background: #ffffff;
+  --band: #f5f5f7; /* alternating section background */
+  --foreground: #1d1d1f;
+  --card: #f5f5f7; /* card on the white background */
+  --card-raised: #ffffff; /* card on a band */
+  --card-foreground: #1d1d1f;
+  --popover: #1d1d1f; /* tooltips are inverted */
+  --popover-foreground: #f5f5f7;
+  --primary: #0066cc;
+  --primary-hover: #0055b3;
+  --primary-foreground: #ffffff;
+  --secondary: #e8e8ed;
+  --secondary-hover: #dcdce1;
+  --secondary-foreground: #1d1d1f;
+  --muted: #f5f5f7;
+  --muted-foreground: #636366;
+  --link: #0066cc;
+  --border: #d2d2d7;
+  --hairline: #e5e5ea;
+  --input: #d2d2d7;
+  --ring: #0066cc;
+  --success: #248a3d;
+  --warning: #c93400;
+  --warning-surface: #fff4ec;
+  --code: #f5f5f7;
+  --nav: rgb(255 255 255 / 0.78);
+  --nav-solid: #ffffff;
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 40px -8px rgb(0 0 0 / 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Without JavaScript the page still follows the system; with it, theme-init.js sets .light or .dark. */
+  :root:not(.light) {
+    color-scheme: dark;
+  }
+}
+
+:root.dark {
+  color-scheme: dark;
+  --background: #000000;
+  --band: #101012;
+  --foreground: #f5f5f7;
+  --card: #1c1c1e;
+  --card-raised: #1c1c1e;
+  --card-foreground: #f5f5f7;
+  --popover: #f5f5f7;
+  --popover-foreground: #1d1d1f;
+  --primary: #0a64d8;
+  --primary-hover: #1a72e6;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2c2e;
+  --secondary-hover: #3a3a3c;
+  --secondary-foreground: #f5f5f7;
+  --muted: #1c1c1e;
+  --muted-foreground: #aeaeb2;
+  --link: #64b5ff;
+  --border: #3a3a3c;
+  --hairline: #2c2c2e;
+  --input: #48484a;
+  --ring: #64b5ff;
+  --success: #30d158;
+  --warning: #ff9f0a;
+  --warning-surface: #2a1d08;
+  --code: #2c2c2e;
+  --nav: rgb(22 22 23 / 0.72);
+  --nav-solid: #161617;
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 48px -8px rgb(0 0 0 / 0.7);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-band: var(--band);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-raised: var(--card-raised);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-link: var(--link);
+  --color-border: var(--border);
+  --color-hairline: var(--hairline);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-code: var(--code);
+  --color-nav: var(--nav);
+  --color-nav-solid: var(--nav-solid);
+  --shadow-panel: var(--shadow-panel);
+
+  --font-sans: "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Microsoft YaHei", "PingFang SC",
+    "Noto Sans CJK SC", "Noto Sans SC", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.375rem;
+  --radius-2xl: 1.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Anchored sections stop below the sticky navigation bar. */
+    scroll-padding-top: 4.5rem;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+  }
+  /* Chinese uses the system's CJK fonts; no Chinese webfont is loaded. */
+  :lang(zh-Hans) {
+    font-family: "Microsoft YaHei", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+  }
+  :lang(zh-Hant) {
+    font-family: "Microsoft JhengHei", "Microsoft JhengHei UI", "PingFang TC", "Noto Sans CJK TC", "Noto Sans TC", "Source Han Sans TC", sans-serif;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+  /* The mobile menu locks page scrolling with a class (no injected <style>, which the CSP would block). */
+  html.scroll-locked,
+  html.scroll-locked body {
+    overflow: hidden;
+  }
+  .noscript {
+    max-width: 40rem;
+    margin: 4rem auto;
+    padding: 0 1rem;
+    font: 1rem/1.5 system-ui, sans-serif;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@utility container-page {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @variant sm {
+    padding-inline: 1.5rem;
+  }
+  @variant lg {
+    padding-inline: 2rem;
+  }
+}
+
+/* Accordion height animation (Radix exposes the measured height as a CSS variable). */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(-0.75rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@theme {
+  --animate-accordion-down: accordion-down 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-accordion-up: accordion-up 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-sheet-in: sheet-in 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-fade-in: fade-in 0.2s ease-out;
+}
