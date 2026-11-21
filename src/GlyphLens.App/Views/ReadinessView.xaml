@@ -75,6 +75,12 @@
 
         <ItemsControl ItemsSource="{Binding Items}" Focusable="False" AlternationCount="1000"
                       AutomationProperties.AutomationId="ReadinessList" AutomationProperties.Name="Readiness checks">
+            <ItemsControl.ItemContainerStyle>
+                <!-- Without a name the row would be announced by its record dump ("ReadinessItem { Id = ... }"). -->
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}" />
+                </Style>
+            </ItemsControl.ItemContainerStyle>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <StackPanel>
