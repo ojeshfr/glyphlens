@@ -39,9 +39,5 @@ public static class ModelsDirectory
         return Path.Combine(modelsDirectory, OcrSubdirectory);
     }
 
-    private static bool IsLocalAbsolute(string value) =>
-        !value.Contains('\0', StringComparison.Ordinal)
-        && !value.StartsWith(@"\\", StringComparison.Ordinal)
-        && !value.StartsWith("//", StringComparison.Ordinal)
-        && Path.IsPathFullyQualified(value);
+    private static bool IsLocalAbsolute(string value) => Setup.LocalPaths.IsLocalAbsolute(value);
 }
