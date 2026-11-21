@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using GlyphLens.Core.Models;
+using GlyphLens.Core.Setup;
 
 namespace GlyphLens.Windows.Worker;
 
@@ -12,11 +13,12 @@ public sealed record PythonInterpreter(string Path, Version Version);
 /// </summary>
 /// <remarks>
 /// <para>
-/// Interpreter search order: an explicitly configured path, then <c>GLYPHLENS_PYTHON</c>, then the virtual environment next
-/// to the worker package (<c>worker\.venv</c>, where the translation extras are installed for development), then
-/// <c>python.exe</c> on <c>PATH</c> (skipping the Microsoft Store stub under <c>WindowsApps</c>, which opens the Store instead
-/// of running Python), then the <c>py</c> launcher. A configured path is never silently replaced by another interpreter. Every
-/// candidate is executed once to confirm it really is Python 3.11 or newer.
+/// Interpreter search order: an explicitly configured path, then <c>GLYPHLENS_PYTHON</c>, then the environment the one-click setup
+/// installs (<c>&lt;runtime&gt;\venv</c>, see <see cref="RuntimeDirectory"/>), then the virtual environment next to the worker package
+/// (<c>worker\.venv</c>, where the engines are installed for development), then <c>python.exe</c> on <c>PATH</c> (skipping the
+/// Microsoft Store stub under <c>WindowsApps</c>, which opens the Store instead of running Python), then the <c>py</c> launcher. A
+/// configured path is never silently replaced by another interpreter. Every candidate is executed once to confirm it really is Python
+/// 3.11 or newer.
 /// </para>
 /// <para>Nothing here installs software or touches the network.</para>
 /// </remarks>
@@ -28,11 +30,15 @@ public static class WorkerLocator
 
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(15);
 
-    public static PythonInterpreter FindPython(string? configuredPath = null)
+    public static PythonInterpreter FindPython(string? configuredPath = null) =>
+        FindPython(configuredPath, Environment.GetEnvironmentVariable);
+
+    /// <summary><see cref="FindPython(string?)"/> with the environment injected (tests).</summary>
+    internal static PythonInterpreter FindPython(string? configuredPath, Func<string, string?> getEnvironmentVariable)
     {
         var configured = !string.IsNullOrWhiteSpace(configuredPath)
             ? configuredPath
-            : Environment.GetEnvironmentVariable(PythonEnvironmentVariable);
+            : getEnvironmentVariable(PythonEnvironmentVariable);
         if (!string.IsNullOrWhiteSpace(configured))
         {
             return Validate(configured) ?? throw new WorkerException(
@@ -40,12 +46,7 @@ public static class WorkerLocator
                 $"The configured Python interpreter '{configured}' is missing or is not Python {MinimumPythonVersion} or newer.");
         }
 
-        if (WorkerVirtualEnvironmentInterpreter() is { } venv && Validate(venv) is { } fromVenv)
-        {
-            return fromVenv;
-        }
-
-        foreach (var candidate in PathCandidates())
+        foreach (var candidate in AutomaticCandidates(getEnvironmentVariable))
         {
             if (Validate(candidate) is { } found)
             {
@@ -53,15 +54,49 @@ public static class WorkerLocator
             }
         }
 
-        var viaLauncher = ResolveViaPyLauncher();
-        if (viaLauncher is not null && Validate(viaLauncher) is { } fromLauncher)
-        {
-            return fromLauncher;
-        }
-
         throw new WorkerException(
             WorkerErrorKind.PythonNotFound,
-            $"No Python {MinimumPythonVersion} or newer was found. Install Python or set {PythonEnvironmentVariable} to its python.exe.");
+            $"No Python {MinimumPythonVersion} or newer was found. Use \"Install everything\" on the Overview page, install Python, or set {PythonEnvironmentVariable} to its python.exe.");
+    }
+
+    /// <summary>
+    /// The interpreters tried when none is configured, in order (lazily: the <c>py</c> launcher is only asked when everything before it
+    /// failed): the setup's environment, <c>worker\.venv</c>, <c>PATH</c>, the <c>py</c> launcher. Only files that exist are returned.
+    /// </summary>
+    internal static IEnumerable<string> AutomaticCandidates(Func<string, string?> getEnvironmentVariable)
+    {
+        if (ManagedRuntimeInterpreter(getEnvironmentVariable) is { } managed)
+        {
+            yield return managed;
+        }
+
+        if (WorkerVirtualEnvironmentInterpreter(getEnvironmentVariable) is { } venv)
+        {
+            yield return venv;
+        }
+
+        foreach (var candidate in PathCandidates(getEnvironmentVariable))
+        {
+            yield return candidate;
+        }
+
+        if (ResolveViaPyLauncher() is { } viaLauncher)
+        {
+            yield return viaLauncher;
+        }
+    }
+
+    /// <summary>The interpreter of the setup's environment (<c>&lt;runtime&gt;\venv</c>) when it exists, otherwise <see langword="null"/>.</summary>
+    internal static string? ManagedRuntimeInterpreter(Func<string, string?> getEnvironmentVariable)
+    {
+        var runtime = RuntimeDirectory.Resolve(getEnvironmentVariable);
+        if (runtime.Root is null)
+        {
+            return null; // no usable runtime folder (an invalid override is reported by the setup, not used here)
+        }
+
+        var candidate = RuntimeDirectory.VirtualEnvironmentPython(runtime.Root);
+        return File.Exists(candidate) ? candidate : null;
     }
 
     /// <summary>Returns the directory that contains the <c>glyphlens_worker</c> package.</summary>
@@ -98,11 +133,11 @@ public static class WorkerLocator
     }
 
     /// <summary>The interpreter of <c>&lt;worker&gt;\.venv</c> when that environment exists, otherwise <see langword="null"/>.</summary>
-    private static string? WorkerVirtualEnvironmentInterpreter()
+    private static string? WorkerVirtualEnvironmentInterpreter(Func<string, string?> getEnvironmentVariable)
     {
         try
         {
-            var candidate = System.IO.Path.Combine(FindWorkerDirectory(), ".venv", "Scripts", "python.exe");
+            var candidate = System.IO.Path.Combine(FindWorkerDirectory(getEnvironmentVariable(WorkerDirectoryEnvironmentVariable)), ".venv", "Scripts", "python.exe");
             return File.Exists(candidate) ? candidate : null;
         }
         catch (WorkerException)
@@ -114,9 +149,9 @@ public static class WorkerLocator
     private static bool IsWorkerDirectory(string path) =>
         File.Exists(System.IO.Path.Combine(path, "glyphlens_worker", "__main__.py"));
 
-    private static IEnumerable<string> PathCandidates()
+    private static IEnumerable<string> PathCandidates(Func<string, string?> getEnvironmentVariable)
     {
-        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var path = getEnvironmentVariable("PATH") ?? string.Empty;
         foreach (var entry in path.Split(System.IO.Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             if (entry.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase))

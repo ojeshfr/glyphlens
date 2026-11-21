@@ -45,6 +45,30 @@ public sealed class PythonWorkerProcessLauncher : IWorkerProcessLauncher, IDispo
         _options = options ?? new PythonWorkerLaunchOptions();
     }
 
+    /// <summary>The interpreter the launcher found (and uses for every start), or <see langword="null"/> before the first start.</summary>
+    public string? InterpreterPath
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _interpreter?.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Forgets the interpreter found earlier, so the next start looks for one again (after the one-click setup installed an environment
+    /// that comes earlier in the search order). A worker that is running keeps running.
+    /// </summary>
+    public void ForgetInterpreter()
+    {
+        lock (_gate)
+        {
+            _interpreter = null;
+        }
+    }
+
     public IWorkerProcess Launch(WorkerLaunchSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);

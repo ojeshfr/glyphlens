@@ -1,0 +1,9 @@
+# The worker's engine packages for the one-click setup ("Install everything"), Windows x64, Python 3.12.
+# The versions are those of the tested environment (worker\.venv, Python 3.12.10). Language identification libraries
+# (Lingua, py3langid) are deliberately not included: Chinese, Japanese, Korean and English are identified by the worker's
+# built-in script rules. The worker package itself is not installed (the app runs it from its source folder).
+# Regenerate engines.lock.txt with the command in docs/DEVELOPMENT.md ("Engine lock file").
+ctranslate2==4.9.0
+sentencepiece==0.2.3
+paddleocr==3.7.0
+onnxruntime==1.32.0

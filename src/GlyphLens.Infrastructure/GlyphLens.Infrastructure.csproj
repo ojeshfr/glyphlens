@@ -13,4 +13,9 @@
     <ProjectReference Include="..\GlyphLens.Core\GlyphLens.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The hash-locked engine packages the one-click setup installs (generated, see docs/DEVELOPMENT.md "Engine lock file"). -->
+    <EmbeddedResource Include="..\..\worker\requirements\engines.lock.txt" LogicalName="GlyphLens.Setup.engines.lock.txt" Link="Setup\engines.lock.txt" />
+  </ItemGroup>
+
 </Project>
