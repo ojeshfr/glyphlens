@@ -82,8 +82,9 @@ function PublishedCard({ r }: { r: Published }) {
         <div>
           <h4 className="text-lg font-semibold tracking-tight">After you unzip</h4>
           <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted-foreground">
-            Open README-PREVIEW.txt. It lists the one-time set-up: the .NET 10 Desktop Runtime, Python with the engine libraries, and the
-            models. Then start GlyphLens.exe; the Overview page shows anything that is still missing.
+            Start GlyphLens.exe. It puts a GlyphLens shortcut on your desktop, once. On the Overview page, press Install everything: it
+            lists what it will download (about 360 MB: Python, the OCR and translation packages, the OCR models and the Chinese models),
+            checks every file against a pinned SHA-256 and installs it for your user only. After that, everything runs offline.
           </p>
         </div>
         <SmartScreenNote />
@@ -138,20 +139,16 @@ const REQUIREMENTS: { title: string; body: string }[] = [
     body: "Tested on build 26200, on one PC with one monitor at 150 % scale. Windows 10, other scales and several monitors are not tested.",
   },
   {
+    title: "Nothing to install first",
+    body: "The zip carries its own .NET runtime, and Install everything sets up its own private Python. Your own Python is not used or changed.",
+  },
+  {
+    title: "Internet once, about 360 MB",
+    body: "Install everything downloads the Python build, 70 pinned packages, the PP-OCRv5 OCR models and the Argos Chinese models (74.5 MB each, CC-BY 4.0). It needs no administrator rights and about 1 GB of disk space.",
+  },
+  {
     title: "A CPU is enough",
     body: "No GPU is used. In one measurement the worker grew from 45 MB to 478 MB of memory once the OCR models were loaded.",
-  },
-  {
-    title: "Two models you get yourself",
-    body: "The PP-OCRv5 mobile OCR files, and the Argos zh→en or zt→en package (74.5 MB, CC-BY 4.0). GlyphLens tells you which one is missing and never fetches them.",
-  },
-  {
-    title: "The .NET 10 Desktop Runtime",
-    body: "The preview is a framework-dependent build, so Microsoft's .NET 10 Desktop Runtime (x64) must be installed first.",
-  },
-  {
-    title: "Python for the worker",
-    body: "OCR and translation run in a Python 3.11+ worker. The zip contains the worker's source; you install Python and the engine libraries with pip (exact versions are in README-PREVIEW.txt).",
   },
 ];
 
@@ -162,7 +159,7 @@ export function DownloadSection() {
         <SectionHeading id="download-title" eyebrow="Download" title={release.published ? "Get the preview." : "Not released yet."}>
           <p>
             {release.published
-              ? "A developer preview for Windows 11: an unsigned zip, not an installer. Check the file before you run it."
+              ? "A developer preview for Windows 11: an unsigned zip, not an installer. Check the file, unzip it, start it and press Install everything."
               : "Here is where it stands, and what the first build will need."}
           </p>
         </SectionHeading>

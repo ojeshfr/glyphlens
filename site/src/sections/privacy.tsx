@@ -21,7 +21,7 @@ export function Privacy() {
     <section id="privacy" aria-labelledby="privacy-title" className="py-24 sm:py-32">
       <div className="container-page">
         <SectionHeading id="privacy-title" eyebrow="Privacy" title="Your screen stays on your PC. Here is exactly what that means.">
-          <p>What GlyphLens keeps, the one feature that uses the network, and what has been checked so far.</p>
+          <p>What GlyphLens keeps, the two things that use the network, and what has been checked so far.</p>
         </SectionHeading>
 
         <div className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[repeat(2,minmax(0,1fr))]">
@@ -35,8 +35,8 @@ export function Privacy() {
                 items={[
                   "Captured frames and recognised text are held in memory only. They are never written to disk, logged or uploaded.",
                   "OCR and translation run in a local worker process. There is no cloud translation and no silent fallback to one: if a model is missing, GlyphLens says so.",
-                  "Models are files you add yourself. GlyphLens never downloads a model.",
-                  "On disk it keeps only the panel's position, size, opacity and text size, your appearance choice and the update settings.",
+                  "Nothing is downloaded on its own. Models and Python arrive only when you press Install everything and confirm, or when you import a model file yourself.",
+                  "On disk it keeps the panel's position, size, opacity and text size, your appearance choice, the update settings, a desktop shortcut, and what you chose to install (Python, the engines, the models and a setup log).",
                   "The clipboard is used only when you press a Copy button. There is no account, no telemetry and no analytics.",
                 ]}
               />
@@ -47,12 +47,18 @@ export function Privacy() {
             <Card className="h-full">
               <CardHeader className="flex-row items-center gap-3">
                 <Globe aria-hidden="true" className="size-6 text-link" />
-                <CardTitle>What uses the network: the update check</CardTitle>
+                <CardTitle>What uses the network</CardTitle>
               </CardHeader>
               <Points
                 items={[
                   <>
-                    GlyphLens contains an automatic update check, on by default. <strong className="font-semibold text-foreground">In the code as it
+                    <strong className="font-semibold text-foreground">Install everything</strong>, only after you press it and confirm. It lists
+                    every download first: uv and a Python build (github.com, releases.astral.sh), 70 packages (pypi.org), the OCR models
+                    (huggingface.co) and the Chinese models (argos-net.com). Each file is checked against a SHA-256 pinned in the app; a file
+                    that does not match is deleted. Nothing from your screen is sent.
+                  </>,
+                  <>
+                    The update check: GlyphLens contains an automatic update check, on by default. <strong className="font-semibold text-foreground">In the code as it
                     stands, no feed address or signing key is built in, so the check does nothing and contacts nothing.</strong>
                   </>,
                   "Once a release owner sets it up, it requests one small signed file over HTTPS about once a day, with a GlyphLens/version User-Agent, no cookies and no identifier. That server sees your IP address and which version you run; nothing from your screen, no text and no settings are sent.",

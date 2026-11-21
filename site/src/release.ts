@@ -34,12 +34,12 @@ export const REPOSITORY = "https://github.com/ojeshfr/glyphlens";
 
 export const release: Release = {
   published: true,
-  version: "0.1.0-preview",
-  fileName: "GlyphLens-0.1.0-preview-win-x64.zip",
-  url: "https://github.com/ojeshfr/glyphlens/releases/download/v0.1.0-preview/GlyphLens-0.1.0-preview-win-x64.zip",
-  sizeBytes: 7180510,
-  sha256: "dcbe20416b26e61ca73f9105a14751fb313a8a8953afa339f31c41a1b3317124",
+  version: "0.1.1-preview",
+  fileName: "GlyphLens-0.1.1-preview-win-x64.zip",
+  url: "https://github.com/ojeshfr/glyphlens/releases/download/v0.1.1-preview/GlyphLens-0.1.1-preview-win-x64.zip",
+  sizeBytes: 70478111,
+  sha256: "e7a9c1b3e8bf8a0e09b6a60b7fdcf87d391b8fd3724f7999cf5ea8b77ccd9e68",
   publishedOn: "2026-11-21",
-  notesUrl: "https://github.com/ojeshfr/glyphlens/releases/tag/v0.1.0-preview",
-  notes: "A developer preview: a zip with the app and the worker source. There is no installer and no model; you set up .NET, Python and the models once.",
+  notesUrl: "https://github.com/ojeshfr/glyphlens/releases/tag/v0.1.1-preview",
+  notes: "A developer preview: a self-contained zip, no installer. On the first run, one button installs Python, the engines and the Chinese models (about 360 MB).",
 };

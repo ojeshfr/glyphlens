@@ -12,7 +12,8 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
           screen is uploaded, logged or saved.
         </p>
         <p>
-          The only network feature is the update check, and in the code as it stands it is not set up, so it contacts nothing. See{" "}
+          Two things use the network: the one-time setup that you start with Install everything, and the update check, which in the code as
+          it stands is not set up and contacts nothing. See{" "}
           <a className="text-link underline underline-offset-4" href="#privacy">
             Privacy
           </a>{" "}
@@ -34,9 +35,9 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     q: "What does it need?",
     a: (
       <p>
-        Windows 11 on a 64-bit PC; a CPU is enough. The preview also needs Microsoft's .NET 10 Desktop Runtime, Python 3.11 or newer with
-        the engine libraries, the OCR model files and an Argos Chinese-to-English package; you download and add those yourself. It has been
-        tested on one Windows 11 PC so far.
+        Windows 11 on a 64-bit PC; a CPU is enough. Nothing has to be installed first: the zip carries its own .NET runtime, and the
+        Install everything button downloads a private Python, the engines and the Chinese models once (about 360 MB, about 1 GB of disk).
+        It has been tested on one Windows 11 PC so far.
       </p>
     ),
   },
