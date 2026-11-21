@@ -287,7 +287,7 @@ Newest last. Each entry: task, files, tests executed, result, what remains.
   (`EnvironmentInstaller`, `HttpFileDownloader`, `UvArchive`, `EngineLock`, `SetupLogFile`); Windows `JobProcessRunner`,
   `ShellLinkShortcutFiles`, `WorkerLocator` (managed venv second), `PythonWorkerProcessLauncher.ForgetInterpreter`; App `SetupViewModel`,
   `Views/SetupPanel.xaml`, `ReadinessViewModel.NeedsSetup`, `WorkerEnvironmentSwitch`, `DesktopShortcutService`, privacy text; icon
-  `Assets/GlyphLens.ico` (placeholder, `tools/make-icon.py [logo.png]`); `worker/requirements/` (`engines.in`, constraints, lock).
+  `Assets/GlyphLens.ico` (made from the owner's chosen logo with `tools/make-icon.py design/logo/glyphlens-logo-1024.png`); `worker/requirements/` (`engines.in`, constraints, lock).
 - Pins: uv 0.13.7 (published 2026-11-03), zip 15,236,317 B SHA-256 `0cdc5b38...6e021` (equal to the release's `.sha256` asset and the
   GitHub API digest, and hashed here), `uv.exe` 31,803,184 B `1791d7a9...35c5a`; Python `cpython-3.12.16-windows-x86_64-none`
   (tested environment: 3.12.10; the wheels are the same cp312 builds); lock 201,615 B, 70 packages, same versions as `worker\.venv`.
