@@ -58,9 +58,10 @@ Privacy and offline operation are core requirements, not optional extras.
 | Text fusion (accessibility + OCR) | ⏳ Planned — Phase 3 |
 | Other source languages (language identification library, BPE-tokenizer Argos packages) | ⏳ Planned — Chinese first |
 | Translation history, side panel | ⏳ Planned — Phase 6 |
-| Installer and models download UI | ⏳ Planned |
+| **Install everything** (one-click setup on the Overview page: uv, a private Python 3.12, the hash-locked OCR and translation packages, the PP-OCRv5 files and the zh/zt models; only after the user confirms) | ✅ Implemented — real install verified on one PC (about 360 MB, 2.5 min); see [ADR-0008](docs/decisions/ADR-0008-explicit-one-click-setup.md) |
+| Desktop shortcut on the first run (once; not recreated after the user deletes it) | ✅ Implemented — unit-tested with real `.lnk` files in a temporary folder; not seen on a real first run |
 | Installer | ⏳ Planned — Phase 8 |
-| Preview release (`v0.1.0-preview`: unsigned zip of the app plus the worker source, no installer, no models; needs the .NET 10 Desktop Runtime and Python) | 📦 See the repository's Releases page |
+| Preview release (`v0.1.1-preview`: unsigned self-contained zip, no installer; **Install everything** sets up Python, the engines and the Chinese models on the first run) | 📦 See the repository's Releases page |
 
 ## Planned capabilities
 
@@ -123,12 +124,21 @@ dotnet restore GlyphLens.sln
 ```
 
 Text recognition uses the built-in Windows OCR, which needs at least one OCR-capable language installed in Windows
-(Settings → Time & language; English is typical). GlyphLens never installs languages or downloads anything; without one, the
-Text recognition panel says so.
+(Settings → Time & language; English is typical). GlyphLens never installs Windows languages; without one, the Text recognition panel
+says so. (The Chinese OCR does not need a Windows language: it comes with Install everything.)
 
-The Python worker currently uses only the standard library; no `pip install` is needed. The app finds Python 3.11+
-(`GLYPHLENS_PYTHON`, then `PATH`, then the `py` launcher) and the worker package itself; start it from the app's
-"Worker diagnostics" panel. Engine dependency research: [docs/research/PYTHON-ENGINE-COMPATIBILITY.md](docs/research/PYTHON-ENGINE-COMPATIBILITY.md).
+**For users of a release:** start `GlyphLens.exe`, open the **Overview** page and click **Install everything** when it is offered. The
+consent panel lists what will be downloaded (uv, Python 3.12, 70 hash-locked packages, the PP-OCRv5 files, the Chinese models; about
+360 MB), from which hosts, and where it goes (`%LOCALAPPDATA%\GlyphLens\runtime` and `...\models`, or `GLYPHLENS_RUNTIME_DIR` /
+`GLYPHLENS_MODELS_DIR`). Nothing is downloaded before you confirm, and afterwards everything runs offline. The manual steps (your own
+Python environment and `pip`, model files you download yourself) still work; see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+**For development:** the worker itself uses only the standard library. The app finds Python in this order: `GLYPHLENS_PYTHON`, the
+environment made by Install everything, `worker\.venv`, `PATH`, the `py` launcher; start it from the app's "Worker diagnostics" panel.
+Engine dependency research: [docs/research/PYTHON-ENGINE-COMPATIBILITY.md](docs/research/PYTHON-ENGINE-COMPATIBILITY.md).
+
+On its first run `GlyphLens.exe` puts a `GlyphLens` shortcut on your desktop, once (deleting it is respected; set
+`GLYPHLENS_NO_DESKTOP_SHORTCUT=1` to turn this off).
 
 ## Build
 
@@ -165,7 +175,8 @@ whenever Python 3.11+ is found, and are skipped with a visible reason otherwise:
 dotnet test tests/GlyphLens.Windows.Tests -c Release --filter "FullyQualifiedName~Worker"
 ```
 
-No test requires internet access or AI models. Tests that need a real display, GPU and windows are skipped
+No default test requires internet access or AI models. The real one-click install and the full Chinese chain (real worker, real OCR,
+real translation) are opt-in: `$env:GLYPHLENS_RUN_INSTALL_TESTS = "1"` (see [docs/TESTING.md](docs/TESTING.md)). Tests that need a real display, GPU and windows are skipped
 unless you opt in (they never run silently in CI):
 
 ```powershell
@@ -176,6 +187,8 @@ $env:GLYPHLENS_RUN_CAPTURE_TESTS = "1"; dotnet test tests/GlyphLens.Windows.Test
 
 - **Local by default and by design.** OCR and translation run on your machine. There is no cloud
   translation and no silent cloud fallback.
+- **Downloads only when you ask.** Install everything downloads the engines and models once, after you confirm, each file checked
+  against a pinned SHA-256; the update check is the only other network use (see [docs/SECURITY.md](docs/SECURITY.md)).
 - **Nothing is uploaded.** Screen content is never sent anywhere.
 - **Minimal retention.** Captured frames and recognised text live in memory only. Persisting translated text (history,
   cache) will be explicit and user-controllable.

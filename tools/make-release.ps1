@@ -24,8 +24,8 @@ if (Test-Path $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Path $folder -Force | Out-Null
 if (Test-Path $zip) { Remove-Item -LiteralPath $zip -Force }
 
-# 1. The app (framework-dependent: the user installs the .NET 10 Desktop Runtime).
-& dotnet publish (Join-Path $root 'src\GlyphLens.App\GlyphLens.App.csproj') -c Release -r win-x64 --self-contained false `
+# 1. The app, self-contained: it carries its own .NET 10 runtime, so nothing has to be installed first.
+& dotnet publish (Join-Path $root 'src\GlyphLens.App\GlyphLens.App.csproj') -c Release -r win-x64 --self-contained true `
     -p:DebugType=none -p:DebugSymbols=false -p:Version=$Version -o $folder
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
 Get-ChildItem -LiteralPath $folder -Recurse -File |
@@ -40,7 +40,15 @@ Copy-Item -LiteralPath (Join-Path $root 'worker\glyphlens_worker') -Destination 
 Get-ChildItem -LiteralPath $worker -Directory -Recurse -Filter '__pycache__' | Remove-Item -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $root 'worker\pyproject.toml'), (Join-Path $root 'worker\README.md') -Destination $worker
 
-# 3. Licence files and the short user README.
+# 3. Licence files, the licence texts of the bundled .NET runtime, and the short user README.
+$dotnetRoot = Split-Path (Get-Command dotnet).Source -Parent
+$dotnetLicences = Join-Path $folder 'licenses\dotnet'
+New-Item -ItemType Directory -Path $dotnetLicences -Force | Out-Null
+foreach ($f in 'LICENSE.txt', 'ThirdPartyNotices.txt') {
+    $source = Join-Path $dotnetRoot $f
+    if (-not (Test-Path -LiteralPath $source)) { throw "The .NET licence file '$f' was not found next to dotnet.exe." }
+    Copy-Item -LiteralPath $source -Destination $dotnetLicences
+}
 foreach ($f in 'LICENSE', 'NOTICE', 'THIRD-PARTY-NOTICES.md') {
     Copy-Item -LiteralPath (Join-Path $root $f) -Destination $folder
 }

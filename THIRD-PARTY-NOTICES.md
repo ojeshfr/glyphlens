@@ -4,10 +4,11 @@ GlyphLens itself is licensed under the Apache License 2.0 (see [LICENSE](LICENSE
 software that a release **contains**, the software the user installs **separately**, and the licences that apply. Checked on 2026-11-21 from
 the package metadata and the upstream repositories' licence files; re-check whenever a dependency changes.
 
-## Contained in the release zip (`win-x64`, framework-dependent publish)
+## Contained in the release zip (`win-x64`, self-contained publish)
 
 | Component | Version | Licence | Copyright notice |
 | --- | --- | --- | --- |
+| .NET 10 runtime and Windows Desktop runtime (WPF) | 10.0.x | MIT (Microsoft; the licence and the third-party notices are in `licenses/dotnet/`) | Copyright (c) .NET Foundation and Contributors / Microsoft Corporation |
 | Vortice.Direct3D11, Vortice.DirectX, Vortice.DXGI | 3.8.3 | MIT | Copyright (c) Amer Koleci and Contributors |
 | Vortice.Mathematics | 2.1.0 | MIT | Copyright (c) Amer Koleci and Contributors |
 | SharpGen.Runtime, SharpGen.Runtime.COM | 2.4.2-beta | MIT | (c) 2010-2017 Alexandre Mutel, 2017-2023 Jeremy Koritzinsky, 2023-2024 Amer Koleci |
@@ -34,8 +35,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 | Component | Where it is needed | Licence (from package metadata) |
 | --- | --- | --- |
-| .NET 10 Desktop Runtime (Microsoft) | to run `GlyphLens.exe` | MIT |
-| Python 3.11 or newer | to run the worker | Python Software Foundation License |
+| Python 3.11 or newer | to run the worker (Install everything provides one) | Python Software Foundation License |
 | CTranslate2 4.9.0 | offline translation | MIT |
 | SentencePiece 0.2.3 | offline translation | Apache-2.0 |
 | PaddleOCR 3.7.0 | Chinese OCR | Apache-2.0 |
@@ -45,9 +45,22 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Their own dependencies (for example NumPy, OpenCV, Pillow, pyclipper, Shapely for PaddleOCR) carry their own permissive licences; they are
 installed by the user with `pip` and are not redistributed by GlyphLens.
 
+## Downloaded on the user's request by "Install everything" (not redistributed by GlyphLens)
+
+The one-click setup fetches these from their publishers when the user clicks Install everything and confirms; they are not part of the
+repository or of a release zip. Checked on 2026-11-21 from the sources named.
+
+| Component | From | Licence (source) |
+| --- | --- | --- |
+| uv 0.13.7 (Astral), only `uv.exe` is kept | github.com/astral-sh/uv release | MIT OR Apache-2.0 (`license` in the tagged `Cargo.toml`; `LICENSE-MIT`, `LICENSE-APACHE` in the repository) |
+| CPython 3.12.16, python-build-standalone build `20261026` (fetched by uv) | releases.astral.sh (Astral's mirror of the python-build-standalone releases) | Python Software Foundation License for CPython (`LICENSE.txt` in the installed build, which also lists the licences of the bundled libraries such as OpenSSL); the python-build-standalone build scripts are MPL-2.0 (repository `LICENSE`) |
+| 70 Python packages of `worker/requirements/engines.lock.txt` (CTranslate2, SentencePiece, PaddleOCR, PaddleX, ONNX Runtime, NumPy, OpenCV, Pillow and their dependencies; fetched by uv) | pypi.org | each package's own licence (package metadata); the direct engines are listed above |
+| PP-OCRv5 mobile det/rec ONNX models | huggingface.co/PaddlePaddle (pinned commits) | Apache-2.0 (model cards) |
+| Argos Translate zh-en and zt-en 1.9 packages | argos-net.com | CC-BY 4.0 (the README inside each package; kept next to the installed model) |
+
 ## Models (never included)
 
-No model weights are in the repository or in a release. The PP-OCRv5 files and the Argos Translate `.argosmodel` packages are downloaded and
+No model weights are in the repository or in a release. The PP-OCRv5 files and the Argos Translate `.argosmodel` packages are downloaded (by the user, or by Install everything on the user's request) and
 imported by the user; each package has its own licence and the user must check it before use or redistribution.
 
 ## Test-only and build-time dependencies

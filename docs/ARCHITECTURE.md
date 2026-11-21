@@ -31,7 +31,7 @@ GlyphLens is two cooperating local processes:
 └───────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Nothing leaves the machine. There is no server component.
+No screen content leaves the machine. There is no server component (the only network use is the update check and the user-started setup in 10.1).
 
 ## 2. Module responsibilities
 
@@ -256,7 +256,7 @@ worker diagnostics) and shows a "Translation overlay" card with Show / Hide / mo
   translation contacts GitHub and it needs about 1 GB of dependencies.
 - Models live in `%LOCALAPPDATA%\GlyphLens\models` (override: `GLYPHLENS_MODELS_DIR`), one folder per language pair, imported only
   from a file the user chooses, through a validating extractor (zip-slip, symlinks, size/ratio caps, entry allow-list, staging and
-  atomic move, SHA-256 manifest). Nothing is downloaded by the app or the worker.
+  atomic move, SHA-256 manifest). The worker downloads nothing; the app downloads only in the user-started one-click setup (10.1).
 - A fail-closed network guard is installed at worker start-up (Python-level only; native code is not covered).
 - `worker.health` reports `languageDetection`, `translation` and `models` truthfully and cheaply (it never imports heavy libraries).
 - Dependencies are optional extras (`translation`, `lingua`, `langid`); the base worker has none.
@@ -264,11 +264,23 @@ worker diagnostics) and shows a "Translation overlay" card with Show / Hide / mo
 **Not implemented:** OCR in the worker (`ocr.detect`), `translation.cancel`, BPE-tokenizer packages (cs, da, es, fi, hu, id, lt, ro,
 uk), periodic health polling.
 
-**Planned:**
+Engine dependency compatibility: [research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md) and
+[research/TRANSLATION-COMPATIBILITY.md](research/TRANSLATION-COMPATIBILITY.md). (`ocr.detect` was implemented later; see section 5.)
 
-- Model download, when implemented, is a separate explicit user action with integrity verification. Engine dependency
-  compatibility: [research/PYTHON-ENGINE-COMPATIBILITY.md](research/PYTHON-ENGINE-COMPATIBILITY.md) and
-  [research/TRANSLATION-COMPATIBILITY.md](research/TRANSLATION-COMPATIBILITY.md).
+### 10.1 One-click environment setup *(implemented, 2026-11-21; [ADR-0008](decisions/ADR-0008-explicit-one-click-setup.md))*
+
+An explicit, user-started action ("Install everything" on the Overview page) that downloads and installs what the worker needs. It
+never runs on its own; the processing path stays offline.
+
+| Layer | Pieces |
+| --- | --- |
+| Core (`Setup/`, `Abstractions/ISetupServices.cs`) | `SetupManifest` (every pinned URL, size, SHA-256, the uv version and Python build, in one file), `RuntimeDirectory` (`%LOCALAPPDATA%\GlyphLens\runtime` / `GLYPHLENS_RUNTIME_DIR`), step and progress models, `SetupException`/`DownloadException`; interfaces `IEnvironmentSetup`, `IFileDownloader`, `IProcessRunner`, `IWorkerEnvironmentSwitch`, `ISetupLog`, `IShortcutFiles`. |
+| Infrastructure (`Setup/`) | `EnvironmentInstaller` (the steps: prepare and free space, uv, Python + venv, locked packages, OCR files, worker restart, zh and zt models through the existing `IModelCatalog.ImportPackageAsync`, final check against the worker's health and catalogue; every step skips itself when its result already verifies), `HttpFileDownloader` (HTTPS only, own redirect handling, size and hash enforced while streaming, `.part` then atomic move), `UvArchive` (extracts only `uv.exe`, refuses any unexpected entry), `EngineLock` (the embedded hash-locked requirements), `SetupLogFile`. |
+| Windows | `JobProcessRunner` (no window, no shell, stdin closed, kill-on-close job object, tree kill on cancel/timeout), `WorkerLocator` (managed venv before `worker\.venv`), `PythonWorkerProcessLauncher.ForgetInterpreter`, `ShellLinkShortcutFiles` (`IShellLinkW`). |
+| App | `SetupViewModel` (Hidden / Offer / Consent / Running / Failed / Succeeded), `Views/SetupPanel.xaml` inside the readiness section, `ReadinessViewModel.NeedsSetup`, `WorkerEnvironmentSwitch` (restarts the worker onto the managed interpreter), `DesktopShortcutService` (first-run desktop shortcut, once). |
+
+The worker folder is found only through `WorkerLocator` (next to the executable or in a `worker` folder above it), so the same code works
+for a framework-dependent or a self-contained build.
 
 See [IPC-PROTOCOL.md](IPC-PROTOCOL.md) and [ADR-0004](decisions/ADR-0004-worker-communication.md).
 

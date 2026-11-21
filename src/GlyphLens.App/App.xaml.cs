@@ -146,7 +146,8 @@ public partial class App : Application, IDisposable
         // "Install everything": offered by the checklist when something is missing; it downloads only after the user confirmed.
         var currentVersion = typeof(App).Assembly.GetName().Version ?? new Version(0, 0, 0);
         var setup = new SetupViewModel(CreateInstaller(catalog, currentVersion), SynchronizationContext.Current, ShowFileInExplorer);
-        var readiness = new ReadinessViewModel(translationViewModel, ocrViewModel, captureViewModel, _workerManager, new WindowsConnectionProbe(), SynchronizationContext.Current, setup: setup);
+        var readiness = new ReadinessViewModel(translationViewModel, ocrViewModel, captureViewModel, _workerManager, new WindowsConnectionProbe(), SynchronizationContext.Current, setup: setup,
+            managedRuntimeInstalled: () => RuntimeDirectory.Resolve(Environment.GetEnvironmentVariable).Root is { } root && File.Exists(RuntimeDirectory.VirtualEnvironmentPython(root)));
         // The updater (see UpdateService and the privacy text); nothing happens when the build has no update feed or signing key
         // (Updates/update-config.json).
         _updateClient = new HttpUpdateClient(currentVersion.ToString(3));

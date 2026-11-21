@@ -5,7 +5,7 @@ pre-release. Nothing here signs, uploads or publishes by itself.
 
 ## What a release contains
 
-`GlyphLens-<version>-win-x64.zip`: a framework-dependent `win-x64` publish of the app (the user installs the .NET 10 Desktop Runtime),
+`GlyphLens-<version>-win-x64.zip`: a self-contained `win-x64` publish of the app (it carries its own .NET 10 runtime, about 67 MB zipped; the licence texts of the runtime are in `licenses/dotnet/`),
 the worker source (`worker/glyphlens_worker`, standard library only), `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES.md` and
 `README-PREVIEW.txt` (set-up steps). No Python packages and no model files are included. The checksum goes next to it as
 `<zip>.sha256` and on the release page.

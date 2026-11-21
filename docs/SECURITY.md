@@ -52,14 +52,15 @@ than necessary.
 
 - Both run **locally** in the Python worker (a child process of the app, reached over the authenticated named pipe). Recognised text
   is sent to the worker **only while translation is switched on**, and never leaves the machine.
-- **No network activity in the recognition and translation path** (the app's only network use is the updater, see "Updates" below). The translation engine is `ctranslate2` + `sentencepiece` reading model files from
+- **No network activity in the recognition and translation path** (the app's only network uses are the updater and the user-started "Install everything", see below). The translation engine is `ctranslate2` + `sentencepiece` reading model files from
   disk. The `argostranslate` library is deliberately not used: it contacts GitHub at the first translation
   ([ADR-0006](decisions/ADR-0006-direct-argos-model-engine.md), [evidence](research/TRANSLATION-COMPATIBILITY.md)). The worker
   also installs a fail-closed Python-level network guard at start-up. **Limits of that guard**: it does not see sockets opened by
   native code (CTranslate2, SentencePiece), so it is defence in depth, not proof. A Windows Firewall outbound rule or a
   `netstat` check on the worker process is the independent check (the end-to-end test records it).
-- **No automatic model downloads.** Installing a model is an explicit user action that imports a `.argosmodel` file the user
-  downloaded themselves. The import validates the archive before installing: absolute local path (UNC and network paths are
+- **No automatic model downloads.** Installing a model is an explicit user action: either importing a `.argosmodel` file the user
+  downloaded themselves, or "Install everything" (see "One-click setup" below), which downloads the pinned packages only after the
+  user confirmed and then imports them through this same importer. The import validates the archive before installing: absolute local path (UNC and network paths are
   refused), `.argosmodel` extension, size limit, zip-slip / absolute-path / symlink checks, an entry allow-list, entry-count,
   expansion-ratio and total-size caps enforced while streaming, a metadata schema check, extraction only of the needed files into a
   staging directory, then an atomic move. **Argos publishes no signatures or checksums**, so importing a package is a trust
@@ -80,7 +81,7 @@ than necessary.
 
 - With the local Chinese OCR selected, each frame is encoded as PNG **in memory** and sent over the authenticated local pipe to the
   worker (`ocr.detect`). It is never written to disk or logged; the worker answers with text and boxes. The OCR model files
-  (PP-OCRv5 ONNX) are placed in `<models>\ocr` by the user; the worker never downloads them and passes the paths to PaddleOCR so it
+  (PP-OCRv5 ONNX) are placed in `<models>\ocr` by the user or by "Install everything" (pinned hashes); the worker never downloads them and passes the paths to PaddleOCR so it
   does not try to fetch anything (the network guard would refuse it).
 - The floating overlay is excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`) so GlyphLens never reads its own translations back. This
   was checked with a control run: with the exclusion deliberately disabled the display capture's OCR read the overlay's own labels (5),
@@ -111,7 +112,8 @@ Proven by tests or measurements on one Windows 11 machine:
 - **No screen data is persisted**: frames and text stay in memory; the overlay saves only its layout (`%LOCALAPPDATA%\GlyphLens\overlay.json`, the only
   file under that folder after the test runs; imported models went to the folder named by `GLYPHLENS_MODELS_DIR`). Logging avoids payloads by design (error paths format types, counts and codes only); that is by code
   review, **not** by a dedicated automated test.
-- **No automatic downloads**: no code path in the app or the worker fetches a model; models are imported from a file the user chose.
+- **No automatic downloads**: no code path in the app or the worker fetches a model on its own; models are imported from a file the user
+  chose, or downloaded by "Install everything" after the user confirmed (added later the same day, see "One-click setup").
 
 **Not proven** (do not assume these):
 
@@ -152,7 +154,47 @@ Implemented in Phase 2a (see [IPC-PROTOCOL.md](IPC-PROTOCOL.md)):
   (`ctranslate2`, `sentencepiece`, `lingua-language-detector` or `py3langid`, pinned in `worker/pyproject.toml`). The worker makes
   no network requests; nothing is downloaded or installed at startup, by health checks or by translation.
 
-## Updates (the application's only network use)
+## One-click setup ("Install everything") - network use started by the user
+
+Added 2026-11-21 ([ADR-0008](decisions/ADR-0008-explicit-one-click-setup.md)). Normal operation stays offline; this is the only way
+GlyphLens itself downloads software or models, and it never starts on its own.
+
+- **When.** Only after the user clicks **Install everything** on the Overview page (offered when something needed for Chinese is
+  missing) and then **Download and install** in the consent panel, which lists every download, its host, its size, its licence and the
+  install folders. Nothing runs at start-up. Cancel stops it at any time.
+- **What is contacted.** `github.com` (and GitHub's download servers it redirects to) for uv 0.13.7; `releases.astral.sh` for the
+  Python 3.12.16 build (fetched by uv, which checks it against its own pinned hash); `pypi.org` / `files.pythonhosted.org` for the 70
+  locked packages (fetched by uv with `--require-hashes --no-deps --no-build`); `huggingface.co` (and its CDN) for the four PP-OCRv5
+  files at a fixed commit; `argos-net.com` for the zh and zt models. About 360 MB in total. Requests carry a `GlyphLens/<version>`
+  User-Agent (GlyphLens' own downloads) or uv's own, no cookies, no identifiers, nothing from the screen. The system proxy is used
+  (and handed to uv when no proxy variable is set).
+- **What is verified.** GlyphLens' own downloads are HTTPS only (also after redirects; HTTPS to HTTP is refused); size and SHA-256 are
+  enforced while streaming (a body larger than pinned is abandoned at once; `Content-Length` is not trusted alone); bytes go to
+  `<name>.part` and are moved into place only after verification; on any failure or cancellation the partial file is deleted. Only
+  `uv.exe` is extracted from uv's zip, and only if the zip has exactly the expected entries (no folders, no `..`) and `uv.exe` has its
+  pinned SHA-256. A mismatch fails with "the file on the server changed ... do not use it". Argos publishes no signatures, so the
+  pinned hash is the trust anchor: it proves "the same bytes as when the hash was pinned", not who made them.
+- **What is written.** Only below the runtime folder (`%LOCALAPPDATA%\GlyphLens\runtime`, override `GLYPHLENS_RUNTIME_DIR`, which
+  must be an absolute local path: otherwise it is refused and reported, never replaced) - `tools\uv.exe`, `python\` (the CPython
+  build), `venv\` (the environment the worker then uses), `uv-cache\` (emptied after a successful install), `downloads\` (partial and
+  waiting files), `engines.lock.txt`, `setup.log` - and the model files in the models folder. No administrator rights. uv runs with
+  `--no-registry --no-bin --no-config` and its install and cache folders inside the runtime folder, so it writes no registry keys and
+  nothing on `PATH` (checked after the real runs: no new key under `HKCU\Software\Python\Astral`). Inherited `PYTHON*`, `UV_*`, `PIP_*`,
+  `VIRTUAL_ENV` and `CONDA*` variables are removed for uv and the Python checks; every Python check runs with `-I`.
+- **Child processes.** uv and the checks run without a window, without a shell, with standard input closed, each in a kill-on-close job
+  object; cancelling, a timeout or GlyphLens exiting ends the whole process tree (tested with real processes).
+- **The log** (`setup.log`) holds the commands and the installers' output with timestamps, capped in size; never screen content.
+- **Not covered.** The publishers' own supply chain (PyPI, Hugging Face, Argos, Astral); the Python build is trusted through the pinned
+  uv's hash list; packages from PyPI keep their own licences and are not reviewed here line by line.
+
+## Desktop shortcut (first run)
+
+On its first run `GlyphLens.exe` creates `GlyphLens.lnk` on the user's desktop (the Shell's `IShellLinkW`, off the UI thread). It is
+done once: a flag (`desktopShortcutHandled`) in `%LOCALAPPDATA%\GlyphLens\preferences.json` makes sure a shortcut the user deleted is
+not created again; an existing shortcut is left alone; a failure is silent and retried at the next start (at most once per run).
+`GLYPHLENS_NO_DESKTOP_SHORTCUT=1` turns it off.
+
+## Updates (network use: the update check)
 
 Added 2026-11-21 at the owner's request: automatic update checks, on by default. This is a deliberate change to the earlier "makes no
 network requests" position; the privacy text in Settings and the website say so.
@@ -192,7 +234,9 @@ network requests" position; the privacy text in Settings and the website say so.
   reported no known vulnerabilities on 2026-11-19. The prerelease transitive dependency is tracked in
   [ADR-0005](decisions/ADR-0005-windows-graphics-capture.md).
 - Python engine dependencies are pinned in `worker/pyproject.toml` extras (`ctranslate2==4.9.0`, `sentencepiece==0.2.3`,
-  `lingua-language-detector==2.2.0`, `py3langid==0.4.0`) after the compatibility research; a lock file with hashes is planned.
+  `lingua-language-detector==2.2.0`, `py3langid==0.4.0`) after the compatibility research. The one-click setup installs the OCR and
+  translation engines from `worker/requirements/engines.lock.txt` (70 packages, all `==`-pinned with SHA-256 hashes, generated from the
+  tested environment; regeneration in docs/DEVELOPMENT.md).
 - Release builds will ship an SBOM and third-party notices (Phase 8).
 - CI workflows run with read-only `contents` permission.
 

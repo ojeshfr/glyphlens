@@ -3,6 +3,8 @@ bin/
 obj/
 [Dd]ebug/
 [Rr]elease/
+# ...but not the release template folder (README-PREVIEW.txt is copied into every release zip)
+!tools/release/
 x64/
 x86/
 [Aa]rtifacts/

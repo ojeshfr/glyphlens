@@ -53,6 +53,7 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
     private StatusLevel _summaryLevel = StatusLevel.Neutral;
     private int _probing;
     private bool _disposed;
+    private readonly Func<bool>? _managedRuntimeInstalled;
     private bool _needsSetup;
 
     public ReadinessViewModel(
@@ -63,7 +64,8 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         IProcessConnectionProbe? probe,
         SynchronizationContext? uiContext,
         TimeProvider? timeProvider = null,
-        SetupViewModel? setup = null)
+        SetupViewModel? setup = null,
+        Func<bool>? managedRuntimeInstalled = null)
     {
         ArgumentNullException.ThrowIfNull(translation);
         ArgumentNullException.ThrowIfNull(ocr);
@@ -78,6 +80,7 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
         _ui = uiContext;
         _time = timeProvider ?? TimeProvider.System;
         Setup = setup;
+        _managedRuntimeInstalled = managedRuntimeInstalled;
 
         Items = new ReadOnlyObservableCollection<ReadinessItem>(_items);
         RecheckCommand = new AsyncRelayCommand(RecheckAsync, () => _probe is not null, uiContext);
@@ -102,7 +105,9 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Whether something needed for Chinese translation is missing and the one-click setup can provide it: no usable Python, the OCR
     /// packages or model files, the translation runtime, or the Simplified Chinese model. The optional Traditional model does not count.
-    /// Nothing is claimed before the worker has reported.
+    /// Before the worker has reported (it starts only when translation is turned on, so a fresh PC never gets that far on its own),
+    /// the offer is made while the one-click setup's own Python environment does not exist yet; a worker that is still starting
+    /// makes no claim.
     /// </summary>
     public bool NeedsSetup
     {
@@ -195,7 +200,9 @@ public sealed class ReadinessViewModel : ViewModelBase, IDisposable
 
         if (status != WorkerStatus.Ready || _worker.LastHealth is not { } health)
         {
-            return false; // not checked yet
+            // Not checked yet (never started, still starting, or stopped). Without the setup's own environment nothing here can be
+            // taken for granted, and nothing else would ever lead a new user to the button; with it, make no claim.
+            return (status is WorkerStatus.Stopped or WorkerStatus.Error) && _managedRuntimeInstalled is { } installed && !installed();
         }
 
         return LocalOcrAdvisor.Classify(health) is LocalOcrState.ModelsMissing or LocalOcrState.RuntimeMissing

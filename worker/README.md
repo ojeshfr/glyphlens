@@ -31,6 +31,10 @@ Known limits:
 
 ## Install the engines
 
+The easiest way: **Install everything** on the application's Overview page creates a private Python 3.12 environment with the engines
+from the hash-locked `requirements/engines.lock.txt` and installs the OCR and Chinese models (after you confirm; see
+`docs/decisions/ADR-0008-explicit-one-click-setup.md`). The worker itself still never downloads anything. Manual installation:
+
 The worker starts with the standard library alone; without a library an engine reports `unavailable` and says how to fix
 it. Install the libraries into the interpreter the application launches (`GLYPHLENS_PYTHON`, or the first suitable
 `python`), with exact versions:

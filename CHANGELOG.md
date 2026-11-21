@@ -6,6 +6,27 @@ intends to use [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (one-click setup and desktop shortcut)
+
+- **Install everything** on the Overview page, offered when something needed for Chinese translation is missing. A consent panel lists
+  every download (host, size, licence) and the install folders; nothing is downloaded before "Download and install". It installs uv
+  0.13.7, a uv-managed CPython 3.12.16 with a private virtual environment (`%LOCALAPPDATA%\GlyphLens\runtime`, override
+  `GLYPHLENS_RUNTIME_DIR`), the OCR and translation engines from a new hash-locked file (`worker/requirements/engines.lock.txt`, 70
+  packages, the tested versions), the PP-OCRv5 files and the Argos zh (and optionally zt) models, then restarts the worker on the new
+  environment and checks it. Live step list, progress bar, Cancel (kills the child processes, deletes partial files), Try again
+  (finished steps are skipped), a technical log. Every file is pinned by size and SHA-256 ([ADR-0008](docs/decisions/ADR-0008-explicit-one-click-setup.md)).
+- `WorkerLocator` finds the managed environment (`<runtime>\venv`) after `GLYPHLENS_PYTHON` and before `worker\.venv`.
+- A desktop shortcut on the first run of `GlyphLens.exe`, once (not recreated after the user deletes it; `GLYPHLENS_NO_DESKTOP_SHORTCUT=1`
+  turns it off), and an application icon (placeholder; `tools/make-icon.py` builds the `.ico` from any square logo PNG).
+- Tests for all of it, plus opt-in real tests (`GLYPHLENS_RUN_INSTALL_TESTS=1`) of the real install, cancellation, a wrong pin and the
+  whole Chinese chain (real OCR and translation through the C# clients).
+
+### Changed
+
+- The privacy text, README and SECURITY.md now name two kinds of network use: the update check and the user-started setup.
+- `tools/release/` is no longer ignored by Git (it holds `README-PREVIEW.txt`, which every release zip needs); the preview README
+  now describes Install everything, with the manual steps as an alternative.
+
 ### Added (licence and first preview release)
 
 - Apache License 2.0 (`LICENSE`), `NOTICE`, `THIRD-PARTY-NOTICES.md`, ADR-0007 and an updated `LICENSE-CHOICE.md`.

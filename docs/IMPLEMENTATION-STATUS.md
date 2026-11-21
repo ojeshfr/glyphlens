@@ -280,6 +280,47 @@ Newest last. Each entry: task, files, tests executed, result, what remains.
   shows the real SHA-256 and links, the Apache-2.0 FAQ text is present, no stale "not released yet"/"no licence" text, and the release zip link redirects and resolves
   with HTTP 200. **NOT TESTED** on the live URL: other browsers and a real phone. The `site/` source and the docs edits are not committed to `main` yet.
 
+### 11. One-click setup ("Install everything") and the first-run desktop shortcut (2026-11-21) - IMPLEMENTED, VERIFIED as stated
+- Why: the first tester's Readiness page showed "Chinese OCR failed" and "Simplified Chinese model: not installed" (system Python 3.14,
+  no engines, no models). Design and policy: [ADR-0008](decisions/ADR-0008-explicit-one-click-setup.md); claims: SECURITY.md.
+- Built: Core `Setup/` (manifest with every pin, runtime folder rules, step models) and setup interfaces; Infrastructure `Setup/`
+  (`EnvironmentInstaller`, `HttpFileDownloader`, `UvArchive`, `EngineLock`, `SetupLogFile`); Windows `JobProcessRunner`,
+  `ShellLinkShortcutFiles`, `WorkerLocator` (managed venv second), `PythonWorkerProcessLauncher.ForgetInterpreter`; App `SetupViewModel`,
+  `Views/SetupPanel.xaml`, `ReadinessViewModel.NeedsSetup`, `WorkerEnvironmentSwitch`, `DesktopShortcutService`, privacy text; icon
+  `Assets/GlyphLens.ico` (placeholder, `tools/make-icon.py [logo.png]`); `worker/requirements/` (`engines.in`, constraints, lock).
+- Pins: uv 0.13.7 (published 2026-11-03), zip 15,236,317 B SHA-256 `0cdc5b38...6e021` (equal to the release's `.sha256` asset and the
+  GitHub API digest, and hashed here), `uv.exe` 31,803,184 B `1791d7a9...35c5a`; Python `cpython-3.12.16-windows-x86_64-none`
+  (tested environment: 3.12.10; the wheels are the same cp312 builds); lock 201,615 B, 70 packages, same versions as `worker\.venv`.
+  The four OCR files and both Argos packages were downloaded and match the brief's sizes and hashes.
+- Results (this machine, Windows 11 build 26200; temporary folders `D:\projects\glyphlens_OST\_install-test\{runtime,models}`):
+
+| Check | Result |
+|---|---|
+| Release build, `dotnet format --verify-no-changes`, `git diff --check` | PASS |
+| .NET tests | PASS: Core 514, Infrastructure 576, App 385 (+1 skipped: opt-in), Windows 165 (+10 skipped: 7 hardware, 3 opt-in install) |
+| Python worker tests, `worker\.venv` | PASS: 395 run, OK, 16 skipped (real-engine tests without their variables) |
+| Python worker tests with the **installed** venv, real OCR files, a rendered Chinese PNG and the fr model | PASS: 395 run, OK, 6 skipped (Lingua and py3langid are deliberately not installed) |
+| Real install, fresh folders (`RealInstallIntegrationTests`, opt-in) | PASS: 153.5 s; GlyphLens' downloader fetched 7 files, 185,726,301 B; uv fetched the Python build (22,014,416 B) and the wheels (about 151.7 MB, computed from PyPI, not measured); runtime 673 MB in 23,154 files, models 191 MB; worker afterwards: Python 3.12.16, OCR installed, translation ready; `--health` from the venv: OCR and translation "installed" |
+| Second run | PASS: 1.4 s, nothing downloaded, every step but Prepare/Check skipped |
+| Cancel during the uv download and during the package install | PASS: no `.part` file, no process from the runtime folder left, no completion marker |
+| Real download with a wrong pinned hash | PASS: refused with "The file on the server changed ... do not use it", nothing kept |
+| Whole Chinese chain through the app's C# code (`RealChineseChainTests`, opt-in) | PASS (19 s): no Python -> worker `Unavailable`; after Install everything the worker runs on the managed venv found by `WorkerLocator`; real OCR of a rendered "你今天晚上有空吗？我们一起去吃饭吧。" read it exactly; zh and zt translate to "Are you free tonight? Let's eat together."; a worker running on `worker\.venv` (Python 3.12.10) was restarted onto the managed venv |
+| uv wrote nothing outside the runtime folder | PASS as far as checked: no new key under `HKCU\Software\Python\Astral` (only an older 3.11.18 entry from an earlier session), nothing new in `%USERPROFILE%\.local\bin` |
+| Offscreen renders of the setup panel (idle, consent, installing, failed, success; light/dark; 1000 and 820 px windows) | CHECKED by eye: no clipping, readable in both themes; PNGs outside the repository |
+| Desktop shortcut | TESTED with real `.lnk` files in a temporary folder and the "once" logic with fakes; NOT seen on a real first run (the app was not started on this PC's desktop) |
+
+- NOT TESTED: the app's UI on screen (only offscreen renders), a clean PC, a slow or proxied network, Windows 10, an install interrupted by
+  a power loss (the code removes stale `.part` files at the next start), the self-contained release layout (the worker is found only
+  through `WorkerLocator`, unchanged logic).
+- Note: during this work five commits (`a37d499`..`b448428`, author `ojeshfr`) appeared on `main` containing most of the files above; they
+  were not made by the agent. Later edits (docs, the icon pack URI, `.gitignore`) are uncommitted.
+
+- **Follow-ups by the reviewer (same day):** the offer is now also made on a new PC before the worker has ever started (the worker starts only when
+  translation is turned on, so a new user would never have found the button); two tests added (`ReadinessViewModelTests`). The owner's chosen logo
+  (two overlapping circles, `design/logo/`) is the application icon (`tools/make-icon.py design/logo/glyphlens-logo-1024.png`) and the sidebar mark.
+  The release script now builds a self-contained zip (about 67 MB; starts without the machine's .NET runtime: checked on a copy of the previous
+  commit) and ships the .NET licence texts in `licenses/dotnet/`.
+
 ### Open items at the end of this session
 - Rerun `drive-keyboard-e2e.ps1` and the other E2E scripts on the current (restyled) build, and look at the running app on screen.
 - Other DPI scales, real screen readers, multi-monitor, Windows 10: NOT TESTED.

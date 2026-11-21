@@ -64,7 +64,7 @@ public sealed class ReadinessViewModelTests
         public ReadinessItem Row(string id) => Vm.Items.Single(i => i.Id == id);
     }
 
-    private static Rig Create(bool zh = true, bool zt = false, bool withProbe = true, SetupViewModel? setup = null)
+    private static Rig Create(bool zh = true, bool zt = false, bool withProbe = true, SetupViewModel? setup = null, Func<bool>? managedRuntimeInstalled = null)
     {
         var engine = new FakeOcr { AvailableLanguages = [new("en-US", "English (United States)"), new(LocalTag, "Chinese + English (local OCR worker)")] };
         var captureService = new FakeCaptureService();
@@ -87,7 +87,7 @@ public sealed class ReadinessViewModelTests
         var translation = new TranslationViewModel(pipeline, catalog, worker, ocr, new FakeModelFilePicker(), _ => { }, uiContext: null);
         var probe = new FakeProbe();
         var ui = new QueueContext();
-        var vm = new ReadinessViewModel(translation, ocr, capture, worker, withProbe ? probe : null, ui, setup: setup);
+        var vm = new ReadinessViewModel(translation, ocr, capture, worker, withProbe ? probe : null, ui, setup: setup, managedRuntimeInstalled: managedRuntimeInstalled);
         return new Rig(vm, translation, ocr, capture, worker, catalog, captureService, probe, ui);
     }
 
@@ -343,6 +343,27 @@ public sealed class ReadinessViewModelTests
         Assert.False(rig.Vm.NeedsSetup);
         Assert.Equal(SetupPanelState.Hidden, setup.State);
         Assert.True(rig.Vm.HasSetup);
+    }
+
+    [Fact]
+    public void ANewPc_BeforeTheWorkerHasEverStarted_StillGetsTheOffer()
+    {
+        // The worker starts only when translation is turned on; without the offer a new user would never find the button.
+        var setup = NewSetup();
+        using var rig = Create(setup: setup, managedRuntimeInstalled: () => false);
+
+        Assert.True(rig.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Offer, setup.State);
+    }
+
+    [Fact]
+    public void WithTheSetupsOwnEnvironmentInstalled_NothingIsClaimedBeforeTheWorkerReports()
+    {
+        var setup = NewSetup();
+        using var rig = Create(setup: setup, managedRuntimeInstalled: () => true);
+
+        Assert.False(rig.Vm.NeedsSetup);
+        Assert.Equal(SetupPanelState.Hidden, setup.State);
     }
 
     [Theory]

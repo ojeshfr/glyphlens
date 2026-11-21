@@ -1,6 +1,6 @@
 # ADR-0003: Local OCR and local translation are fundamental requirements
 
-- **Status:** Accepted (Phase 0)
+- **Status:** Accepted (Phase 0); amended by [ADR-0008](ADR-0008-explicit-one-click-setup.md) (the user-started one-click setup)
 - **Date:** 2026-11-19
 
 ## Context

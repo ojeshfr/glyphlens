@@ -76,6 +76,39 @@ What has actually been run, and what still needs a human with other hardware, is
 - Not covered by automated tests: non-English languages, rotated text, small or low-contrast text, and real application
   content. See [CAPTURE-MANUAL-TESTS.md](CAPTURE-MANUAL-TESTS.md) section 3b.
 
+## One-click setup, desktop shortcut and the full Chinese chain
+
+Counts of 2026-11-21 after this feature: **Core 514, Infrastructure 576, App 385 (+1 skipped), Windows 165 (+10 skipped: 7 hardware, 3
+install)**; Python worker 395.
+
+- **Default (no network, no models):** `SetupManifestTests` (https only, 64-hex hashes, sizes > 0, pinned Hugging Face commit, hosts,
+  OCR destinations), `RuntimeDirectoryTests` (override rules), `HttpFileDownloaderTests` (fake HTTP: HTTPS only, https-to-http redirect
+  refused, relative redirects, redirect limit, size enforced while streaming on an endless body, Content-Length mismatch, early end,
+  wrong hash, cancellation and stall delete the `.part`, skip when already verified, User-Agent only), `UvArchiveTests` (zip-slip,
+  folders, unexpected or duplicate entries, wrong size/hash), `EngineLockTests` (embedded = repository file; every line `==` with
+  SHA-256; direct pins; versions equal the tested environment; no Lingua, py3langid or worker package), `EnvironmentInstallerTests`
+  (fakes for HTTP, processes, worker and catalogue but real files in a temporary folder: order, uv arguments and environment, nothing
+  written outside the two folders, second run skips everything, resume after failure, cancellation, disk space, wrong pin, final check),
+  `JobProcessRunnerTests` (real `cmd.exe`/`ping.exe`: output, exit code, environment, closed stdin, timeout, the whole tree killed on
+  cancel), `ShellLinkShortcutFilesTests` (a real `.lnk` written and read back in a temporary folder), `WorkerLocatorOrderTests`
+  (managed venv, then `worker\.venv`, then `PATH`; a real venv made with `python -m venv`), `SetupViewModelTests`,
+  readiness offer tests, `WorkerEnvironmentSwitchTests`, `DesktopShortcutServiceTests` (temporary desktop and preferences; never the
+  real ones).
+- **Opt-in, needs the internet:** `$env:GLYPHLENS_RUN_INSTALL_TESTS = "1"`, optional `$env:GLYPHLENS_INSTALL_TEST_ROOT` (default
+  `%TEMP%\glyphlens-install-test`; it gets `runtime` and `models`). Never run by CI; skipped with a visible reason otherwise.
+  - `tests/GlyphLens.Windows.Tests/Setup/RealInstallIntegrationTests.cs`: the real installer end to end, then a second run that must skip
+    everything and download nothing; a real cancellation during the uv download and during the package install (no `.part` file, no
+    process from the runtime folder left); a real download with a deliberately wrong pin (refused with the "server changed" message).
+  - `tests/GlyphLens.App.Tests/RealChineseChainTests.cs`: no usable Python (worker `Unavailable`), Install everything with the app's
+    `WorkerEnvironmentSwitch`, the worker found by `WorkerLocator` in the managed venv, a real OCR request on rendered Chinese text and
+    real zh/zt-to-English translations through the C# clients, and a worker running on another Python restarted onto the managed one.
+    It changes process environment variables (in a non-parallel collection) and restores them.
+  - Run them one project at a time, for example
+    `dotnet test tests/GlyphLens.Windows.Tests -c Release --filter "FullyQualifiedName~RealInstallIntegrationTests"`.
+- The Python real-engine tests can use the installed environment: `<runtime>\venv\Scripts\python.exe -m unittest discover -s tests -t .`
+  from `worker/` with `GLYPHLENS_TEST_OCR_MODELS_DIR=<models>`, `GLYPHLENS_TEST_OCR_IMAGE=<a PNG with Chinese text>` and
+  `GLYPHLENS_TEST_FR_EN_MODEL`.
+
 ## Translation, OCR and overlay tests
 
 - **.NET** (Core 479, Infrastructure 497, App 345, Windows 155 of which 7 hardware tests are skipped by design; counts of 2026-11-21): contracts, `TranslationPipeline` (detection, manual language, uncertainty,
