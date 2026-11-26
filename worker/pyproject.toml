@@ -20,7 +20,7 @@ classifiers = [
 
 [project.optional-dependencies]
 # Offline translation: Argos model packages run directly with CTranslate2 and SentencePiece (about 120 MB).
-translation = ["ctranslate2==4.9.0", "sentencepiece==0.2.3"]
+translation = ["ctranslate2==4.9.1", "sentencepiece==0.2.3"]
 # Chinese-capable OCR: PaddleOCR's PP-OCRv5 pipeline on ONNX Runtime (the paddlepaddle wheel is not needed). The model
 # files are placed by the user in <models>/ocr (see worker/README.md); nothing is downloaded at run time.
 ocr = ["paddleocr==3.7.0", "onnxruntime>=1.20"]
