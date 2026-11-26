@@ -67,5 +67,5 @@ typing_extensions==4.16.0
 tzdata==2026.6
 ujson==6.1.0
 urllib3==2.8.0
-wcwidth==0.9.4
+wcwidth==0.9.5
 yarl==1.25.1
